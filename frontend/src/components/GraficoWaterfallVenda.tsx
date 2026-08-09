@@ -27,7 +27,7 @@ export const GraficoWaterfallVenda: React.FC<GraficoWaterfallProps> = ({ resulta
 
   const dadosWaterfall = [
     {
-      nome: "Valor de Venda",
+      nome: "Valor Venda",
       valor: Math.round(valorVenda),
       cor: "#1F809B", // Teal principal
     },
@@ -73,41 +73,41 @@ export const GraficoWaterfallVenda: React.FC<GraficoWaterfallProps> = ({ resulta
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 card-shadow space-y-4">
-      <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+    <div className="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 border border-slate-200 card-shadow space-y-4">
+      <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-widest text-teal-600">
             Gráfico de Decomposição Financeira
           </span>
-          <h3 className="text-lg font-bold text-slate-900">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900">
             Cascata (Waterfall) do Resultado da Venda
           </h3>
           <p className="text-xs text-slate-500">
             Do valor bruto de venda até o valor líquido no bolso após liquidação da dívida e taxas.
           </p>
         </div>
-        <span className="text-xs font-extrabold px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200">
+        <span className="text-[10px] sm:text-xs font-extrabold px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200 self-start sm:self-auto">
           Visualização Oficial
         </span>
       </div>
 
-      <div className="h-80 w-full pt-4">
+      <div className="h-64 sm:h-80 w-full pt-2 sm:pt-4">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={dadosWaterfall} margin={{ top: 20, right: 30, left: 10, bottom: 25 }}>
+          <BarChart data={dadosWaterfall} margin={{ top: 15, right: 10, left: -10, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
             <XAxis
               dataKey="nome"
-              tick={{ fontSize: 12, fontWeight: "600", fill: "#334155" }}
+              tick={{ fontSize: 10, fontWeight: "600", fill: "#334155" }}
               interval={0}
             />
-            <YAxis tickFormatter={formatarMoedaResumida} tick={{ fontSize: 11, fill: "#64748B" }} />
+            <YAxis tickFormatter={formatarMoedaResumida} tick={{ fontSize: 10, fill: "#64748B" }} />
             <Tooltip
               formatter={(val: number) => [
                 `R$ ${val.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
                 "Valor",
               ]}
             />
-            <Bar dataKey="valor" radius={[10, 10, 0, 0]} barSize={60}>
+            <Bar dataKey="valor" radius={[8, 8, 0, 0]} barSize={45}>
               {dadosWaterfall.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.cor} />
               ))}

@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { DollarSign, ShieldCheck, Tag, ShoppingBag } from "lucide-react";
+import {
+  DollarSign,
+  ShieldCheck,
+  ShoppingBag,
+  Save,
+  CheckCircle2,
+  RefreshCw,
+} from "lucide-react";
 import { DadosImovel, DadosFinanciamento, ResultadoVenda, TaxaExtra } from "../types";
 import { formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
 import { calcularCenarioVenda } from "../services/regras-fiscais";
@@ -9,12 +16,18 @@ interface CardSimulacaoVendaProps {
   dadosImovel: DadosImovel;
   dadosFinanciamento: DadosFinanciamento;
   onResultadoVendaAtualizado: (res: ResultadoVenda) => void;
+  onSalvarSimulacao?: () => Promise<void>;
+  salvandoBanco?: boolean;
+  mensagemBanco?: string | null;
 }
 
 export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
   dadosImovel,
   dadosFinanciamento,
   onResultadoVendaAtualizado,
+  onSalvarSimulacao,
+  salvandoBanco = false,
+  mensagemBanco = null,
 }) => {
   // Estado local para o único campo de input manual: Valor de Venda (R$)
   const valorMercadoInicial = dadosImovel.valorMercadoAtual || dadosImovel.valorCompra || 400000;
@@ -84,21 +97,46 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow space-y-6">
-      {/* Cabeçalho no mesmo padrão dos blocos 1 e 2 */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <ShoppingBag className="w-5 h-5 text-teal-600" />
-          3. Simular Venda para Terceiro
-        </h3>
-        <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-          Liquidez em Tempo Real
-        </span>
+    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 card-shadow space-y-5">
+      {/* Cabeçalho no mesmo padrão dos blocos 1 e 2 + Botão Salvar Simulação */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div>
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-teal-600 flex-shrink-0" />
+            3. Simular Venda para Terceiro
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Abate automaticamente o saldo devedor do financiamento e calcula o valor líquido final.
+          </p>
+        </div>
+
+        {onSalvarSimulacao && (
+          <button
+            onClick={onSalvarSimulacao}
+            disabled={salvandoBanco}
+            className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 w-full sm:w-auto self-stretch sm:self-auto"
+          >
+            {salvandoBanco ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+            ) : (
+              <Save className="w-4 h-4 text-amber-400" />
+            )}
+            Salvar Simulação
+          </button>
+        )}
       </div>
+
+      {/* Mensagem de salvamento */}
+      {mensagemBanco && (
+        <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-3.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{mensagemBanco}</span>
+        </div>
+      )}
 
       <div className="space-y-4 text-xs">
         {/* ÚNICO CAMPO DE INPUT MANUAL: Valor de Venda (R$) */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+        <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200 space-y-1.5">
           <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
             Valor de Venda Simulado (R$)
           </label>
@@ -118,7 +156,7 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
                 setTextoValorVenda(formatCurrencyBRL(num));
               }}
               placeholder="400.000,00"
-              className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-base font-extrabold text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition"
+              className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base font-extrabold text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition"
             />
           </div>
           <p className="text-[11px] text-slate-400">
@@ -129,23 +167,23 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
         {/* DEDUÇÕES AUTOMÁTICAS */}
         {/* 1. Quitação do Saldo Devedor Puxado Automático */}
         <div className="flex justify-between py-2 border-b border-slate-100 text-rose-600">
-          <span>(-) Quitação do Saldo Devedor (Puxado do Financiamento)</span>
-          <span className="font-bold">
+          <span className="font-medium">(-) Quitação do Saldo Devedor (Puxado do Financiamento)</span>
+          <span className="font-bold whitespace-nowrap ml-2">
             -R$ {resultadoVendaCompleto.saldoDevedorAbatido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
         </div>
 
         {/* 2. Corretagem Imobiliária (6%) */}
         <div className="flex justify-between py-2 border-b border-slate-100 text-rose-600">
-          <span>(-) Corretagem Imobiliária (6%)</span>
-          <span className="font-semibold">
+          <span className="font-medium">(-) Corretagem Imobiliária (6%)</span>
+          <span className="font-semibold whitespace-nowrap ml-2">
             -R$ {resultadoVendaCompleto.valorCorretagem.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
         </div>
 
         {/* 3. Imposto de Renda sobre Ganho de Capital com Badge ISENTO */}
         <div className="flex justify-between py-2 border-b border-slate-100 text-rose-600 items-center">
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 font-medium">
             (-) Imposto de Renda (Ganho de Capital)
             {resultadoVendaCompleto.isentoIR && (
               <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
@@ -153,7 +191,7 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
               </span>
             )}
           </span>
-          <span className="font-semibold">
+          <span className="font-semibold whitespace-nowrap ml-2">
             -R$ {resultadoVendaCompleto.impostoRendaCalculado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
         </div>
@@ -175,16 +213,16 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
         />
 
         {/* VALOR LÍQUIDO NO BOLSO AGORA (CARD DE DESTAQUE) */}
-        <div className="p-5 bg-slate-900 text-white rounded-2xl flex items-center justify-between mt-4 shadow-md">
+        <div className="p-4 sm:p-5 bg-slate-900 text-white rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4 shadow-md">
           <div>
             <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-bold">
               VALOR LÍQUIDO NO BOLSO AGORA
             </span>
-            <span className="text-2xl font-black text-teal-400 mt-0.5 block">
+            <span className="text-xl sm:text-2xl font-black text-teal-400 mt-0.5 block">
               R$ {resultadoVendaCompleto.resultadoLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <DollarSign className="w-10 h-10 text-teal-400/30" />
+          <DollarSign className="w-8 h-8 sm:w-10 sm:h-10 text-teal-400/30 self-end sm:self-auto" />
         </div>
       </div>
     </div>

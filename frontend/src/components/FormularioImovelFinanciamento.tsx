@@ -3,10 +3,8 @@ import {
   Building2,
   Landmark,
   Search,
-  CheckCircle2,
   RefreshCw,
   Sparkles,
-  Save,
   MapPin,
 } from "lucide-react";
 import { DadosImovel, DadosFinanciamento, EstimativaValorizacao } from "../types";
@@ -18,12 +16,8 @@ interface FormularioProps {
   setDadosImovel: React.Dispatch<React.SetStateAction<DadosImovel>>;
   dadosFinanciamento: DadosFinanciamento;
   setDadosFinanciamento: React.Dispatch<React.SetStateAction<DadosFinanciamento>>;
-  onSimular: () => void;
-  onSalvarNoBanco: () => Promise<void>;
   taxaValorizacaoEstimada: number;
   setTaxaValorizacaoEstimada: React.Dispatch<React.SetStateAction<number>>;
-  salvandoBanco: boolean;
-  mensagemBanco: string | null;
 }
 
 export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
@@ -31,12 +25,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
   setDadosImovel,
   dadosFinanciamento,
   setDadosFinanciamento,
-  onSimular,
-  onSalvarNoBanco,
-  taxaValorizacaoEstimada,
   setTaxaValorizacaoEstimada,
-  salvandoBanco,
-  mensagemBanco,
 }) => {
   const [buscandoValorizacao, setBuscandoValorizacao] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
@@ -68,7 +57,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
     dadosFinanciamento.valorParcelaAtual,
   ]);
 
-  // Recálculo automático do saldo devedor e parcela no frontend (0ms latency, 100% offline/Vercel)
+  // Recálculo automático do saldo devedor e parcela no frontend em tempo real
   useEffect(() => {
     if (dadosFinanciamento.valorFinanciado > 0) {
       recalcularFinanciamentoLocal();
@@ -141,14 +130,12 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
     if (!end) return;
     setBuscandoValorizacao(true);
     try {
-      // Tentar API do backend ou calcular estimativa local
       const res = await fetch(`/api/valorizacao/buscar?endereco=${encodeURIComponent(end)}`).catch(() => null);
       if (res && res.ok) {
         const data: EstimativaValorizacao = await res.json();
         setResultadoBusca(data);
         setTaxaValorizacaoEstimada(data.taxaValorizacaoAnualEstimada);
       } else {
-        // Estimativa local padrão baseada no IPCA/FipeZap médio (6.5% a.a.)
         setResultadoBusca({
           enderecoConsultado: `${end}, ${cid || ""} - ${uf || ""}`,
           taxaValorizacaoAnualEstimada: 6.5,
@@ -181,67 +168,23 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Título da Seção & Ações com o novo nome "Salvar Simulação" */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl card-shadow border border-slate-100">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-teal-600" />
-            Cadastro do Imóvel & Financiamento
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Preencha os valores formatados em moeda (R$) e o CEP para busca automática.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={onSalvarNoBanco}
-            disabled={salvandoBanco}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm px-5 py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
-          >
-            {salvandoBanco ? (
-              <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
-            ) : (
-              <Save className="w-4 h-4 text-amber-400" />
-            )}
-            Salvar Simulação
-          </button>
-
-          <button
-            onClick={onSimular}
-            className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            Gerar Comparativo
-          </button>
-        </div>
-      </div>
-
-      {/* Mensagem de salvamento */}
-      {mensagemBanco && (
-        <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-4 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-          <span>{mensagemBanco}</span>
-        </div>
-      )}
-
-      {/* Grid de 2 Colunas */}
+      {/* Grid de 2 Colunas Responsivo para Celular e Desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* BLOCO 1: DADOS DO IMÓVEL */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-teal-600" />
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 card-shadow space-y-4 sm:space-y-5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 sm:pb-4">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-teal-600 flex-shrink-0" />
               1. Dados do Imóvel
             </h3>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700">
+            <span className="text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700">
               Imóvel
             </span>
           </div>
 
           {/* Campo CEP com Máscara XXXXX-XXX */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-teal-600" /> CEP (Formato 00000-000)
             </label>
             <div className="relative">
@@ -251,35 +194,35 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 value={dadosImovel.cep}
                 onChange={(e) => handleCepChange(e.target.value)}
                 placeholder="00000-000"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 transition"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 transition"
               />
               {buscandoCep && (
                 <RefreshCw className="w-4 h-4 animate-spin absolute right-3 top-3 text-teal-600" />
               )}
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              Ao digitar o CEP (ex: 33015-560), o endereço, cidade e UF são preenchidos automaticamente.
+              Digite o CEP para buscar endereço, cidade e UF automaticamente.
             </p>
           </div>
 
           {/* Endereço Completo */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Endereço (Rua, Número, Bairro)
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={dadosImovel.endereco}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, endereco: e.target.value })}
                 placeholder="Ex: Rua Domingos Marcelino, Kennedy"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 transition"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 transition"
               />
               <button
                 type="button"
                 onClick={handleBuscarValorizacao}
                 disabled={buscandoValorizacao}
-                className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap shadow-sm"
+                className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm w-full sm:w-auto"
               >
                 {buscandoValorizacao ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -296,20 +239,20 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
           {resultadoBusca && (
             <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-3.5 space-y-2 text-xs">
               <div className="flex items-center justify-between text-teal-900 font-bold">
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-teal-600" />
-                  Potencial Estimado para a Região:
+                <span className="flex items-center gap-1.5 text-xs">
+                  <Sparkles className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                  Potencial Estimado da Região:
                 </span>
-                <span className="text-sm font-extrabold text-teal-700 bg-white px-2.5 py-0.5 rounded-lg border border-teal-200">
+                <span className="text-xs font-extrabold text-teal-700 bg-white px-2 py-0.5 rounded-lg border border-teal-200">
                   {resultadoBusca.taxaValorizacaoAnualEstimada}% a.a.
                 </span>
               </div>
-              <p className="text-slate-600 leading-relaxed">{resultadoBusca.resumo}</p>
+              <p className="text-slate-600 leading-relaxed text-[11px]">{resultadoBusca.resumo}</p>
             </div>
           )}
 
           {/* Cidade e Estado */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label>
               <input
@@ -415,13 +358,13 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
         </div>
 
         {/* BLOCO 2: DADOS DO FINANCIAMENTO */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Landmark className="w-5 h-5 text-teal-600" />
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 card-shadow space-y-4 sm:space-y-5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 sm:pb-4">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+              <Landmark className="w-5 h-5 text-teal-600 flex-shrink-0" />
               2. Dados do Financiamento
             </h3>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
+            <span className="text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
               Dívida Ativa
             </span>
           </div>
@@ -433,7 +376,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <select
                 value={dadosFinanciamento.banco}
                 onChange={(e) => setDadosFinanciamento({ ...dadosFinanciamento, banco: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900"
               >
                 <option value="Caixa Econômica Federal">Caixa Econômica Federal</option>
                 <option value="Itaú Unibanco">Itaú Unibanco</option>
@@ -500,7 +443,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
           </div>
 
           {/* Parcelas Total e Pagas */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Nº Parcelas Total</label>
               <input
