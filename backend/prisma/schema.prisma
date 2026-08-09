@@ -1,0 +1,102 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         String   @id @default(uuid())
+  nome       String
+  email      String   @unique
+  senha_hash String
+  criado_em  DateTime @default(now())
+
+  imoveis Imovel[]
+
+  @@map("users")
+}
+
+model Imovel {
+  id                    String   @id @default(uuid())
+  user_id               String?
+  endereco              String
+  cidade                String
+  estado                String
+  cep                   String
+  valor_compra          Float
+  data_compra           DateTime
+  custo_aquisicao_extra Float    @default(0.0)
+  valor_mercado_atual   Float?
+  criado_em             DateTime @default(now())
+  atualizado_em         DateTime @updatedAt
+
+  user               User?               @relation(fields: [user_id], references: [id])
+  financiamentos     Financiamento[]
+  simulacoes_venda   SimulacaoVenda[]
+  simulacoes_aluguel SimulacaoAluguel[]
+
+  @@map("imoveis")
+}
+
+model Financiamento {
+  id                    String   @id @default(uuid())
+  imovel_id             String
+  banco                 String
+  valor_financiado      Float
+  taxa_juros_anual      Float
+  sistema_amortizacao   String   // SAC ou PRICE
+  numero_parcelas_total Int
+  parcelas_pagas        Int
+  valor_parcela_atual   Float
+  saldo_devedor_atual   Float
+  data_inicio           DateTime @default(now())
+
+  imovel Imovel @relation(fields: [imovel_id], references: [id], onDelete: Cascade)
+
+  @@map("financiamentos")
+}
+
+model SimulacaoVenda {
+  id                     String   @id @default(uuid())
+  imovel_id              String
+  valor_venda_estimado   Float
+  percentual_corretagem  Float    @default(6.0)
+  data_simulacao         DateTime @default(now())
+  resultado_liquido      Float
+  imposto_renda_calculado Float
+  isento_ir              Boolean  @default(false)
+  motivo_isencao         String?
+
+  imovel Imovel @relation(fields: [imovel_id], references: [id], onDelete: Cascade)
+
+  @@map("simulacoes_venda")
+}
+
+model SimulacaoAluguel {
+  id                              String   @id @default(uuid())
+  imovel_id                       String
+  valor_aluguel_mensal            Float
+  custos_mensais_extras           Float    @default(0.0)
+  aliquota_ir_aluguel             Float    @default(0.0)
+  taxa_valorizacao_anual_estimada Float    @default(0.0)
+  meses_ate_quitar                Int
+  valor_imovel_projetado          Float
+  data_simulacao                  DateTime @default(now())
+
+  imovel Imovel @relation(fields: [imovel_id], references: [id], onDelete: Cascade)
+
+  @@map("simulacoes_aluguel")
+}
+
+model ValorizacaoRegiao {
+  id                              String   @id @default(uuid())
+  endereco_consultado             String
+  taxa_valorizacao_anual_estimada Float
+  fontes                          String   // JSON em string
+  consultado_em                   DateTime @default(now())
+
+  @@map("valorizacao_regiao")
+}
