@@ -5,7 +5,7 @@ import { DashboardComparativo } from "./components/DashboardComparativo";
 import { DadosImovel, DadosFinanciamento, ResultadoAluguel } from "./types";
 
 export const App: React.FC = () => {
-  // Estado com campos limpos por padrão (conforme solicitado pelo usuário)
+  // Estado com campos limpos por padrão
   const [dadosImovel, setDadosImovel] = useState<DadosImovel>({
     endereco: "",
     cidade: "",
@@ -131,7 +131,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Salva no banco de dados (Tabelas: imoveis, financiamentos, simulacoes_aluguel)
+  // Salva no banco de dados
   const handleSalvarNoBanco = async () => {
     if (!dadosImovel.endereco || !dadosImovel.cidade || !dadosImovel.cep) {
       setMensagemBanco("⚠️ Preencha pelo menos o CEP e endereço do imóvel antes de salvar no banco.");
@@ -142,7 +142,6 @@ export const App: React.FC = () => {
     setMensagemBanco(null);
 
     try {
-      // 1. Salvar Imóvel e Financiamento na API
       const resImovel = await fetch("/api/imoveis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -168,7 +167,6 @@ export const App: React.FC = () => {
       if (resImovel.ok) {
         const imovelCriado = await resImovel.json();
 
-        // 2. Salvar Simulação de Aluguel associada ao imóvel criado
         if (valorAluguelMensal > 0) {
           await fetch("/api/simulacoes/aluguel", {
             method: "POST",
@@ -210,50 +208,7 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Header onNovaAnalise={handleNovaAnalise} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
-        {/* Banner Hero */}
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 card-shadow flex flex-col lg:flex-row items-center justify-between gap-8">
-          <div className="space-y-3 max-w-2xl">
-            <span className="inline-block px-3 py-1 bg-teal-50 text-teal-700 text-xs font-extrabold uppercase tracking-wider rounded-lg border border-teal-200/60">
-              Tomada de Decisão Financeira
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              Vender o imóvel financiado agora ou alugar para quitar?
-            </h1>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Descubra matematicamente qual decisão maximiza seu patrimônio no médio e longo prazo, considerando amortização acelerada, imposto de renda sobre ganho de capital, valorização imobiliária por endereço e custo de oportunidade no CDI.
-            </p>
-          </div>
-
-          {/* Card de Resumo em Tempo Real */}
-          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 min-w-[280px] w-full lg:w-auto">
-            <span className="text-[10px] text-teal-400 font-bold uppercase tracking-widest block mb-1">
-              Imóvel em Análise
-            </span>
-            <h4 className="text-sm font-bold text-white truncate max-w-[240px]">
-              {dadosImovel.endereco || "Digite o CEP para preencher..."}
-            </h4>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {dadosImovel.cidade ? `${dadosImovel.cidade}/${dadosImovel.estado}` : "Aguardando endereço"}
-            </p>
-
-            <div className="mt-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-[10px] text-slate-400 block">Mercado Atual</span>
-                <span className="font-extrabold text-teal-300">
-                  R$ {(dadosImovel.valorMercadoAtual || 0).toLocaleString("pt-BR")}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 block">Saldo Devedor</span>
-                <span className="font-extrabold text-amber-400">
-                  R$ {(dadosFinanciamento.saldoDevedorAtual || 0).toLocaleString("pt-BR")}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Formulário de Entrada com CEP Automático & Salvamento no Banco */}
         <FormularioImovelFinanciamento
           dadosImovel={dadosImovel}
@@ -288,7 +243,7 @@ export const App: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 py-6 mt-16">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
           <p>
-            © {new Date().getFullYear()} ImóvelWise. Sistema de Análise Financeira de Venda vs. Aluguel de Imóveis Financiados.
+            © {new Date().getFullYear()} Sistema de Análise Financeira de Venda vs. Aluguel de Imóveis Financiados.
           </p>
         </div>
       </footer>
