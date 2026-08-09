@@ -5,7 +5,6 @@ import {
   TrendingUp,
   Scale,
   Sparkles,
-  Percent,
 } from "lucide-react";
 import { ResultadoVenda } from "../types";
 
@@ -24,11 +23,9 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
 }) => {
   const {
     valorVenda,
-    resultadoLiquido,
     impostoRendaCalculado,
     isentoIR,
     motivoIsencao,
-    valorCorretagem,
     totalTaxasExtras = 0,
   } = resultadoVenda;
 
@@ -45,28 +42,28 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
     valorVenda > 0 ? ((valorVenda - valorVendaMinimoBreakEven) / valorVenda) * 100 : 0;
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow space-y-6">
+    <div id="relatorio" className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-6">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <span className="text-[10px] font-bold text-teal-600 uppercase tracking-widest flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
             Análise Estratégica Automática
           </span>
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mt-0.5">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 mt-0.5">
             <Lightbulb className="w-5 h-5 text-amber-500" />
             Insights Inteligentes da Venda
           </h3>
         </div>
-        <span className="text-xs font-bold px-3 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-100">
+        <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
           Relatório Financeiro
         </span>
       </div>
 
-      {/* Grid de 3 Cards de Insights */}
+      {/* Grid de 3 Cards de Insights (Column UI Style) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* INSIGHT 1: Status Fiscal de IRPF */}
-        <div className="bg-gradient-to-br from-slate-50 to-emerald-50/50 p-5 rounded-2xl border border-slate-200/80 space-y-3 relative overflow-hidden">
+        <div className="bg-slate-50/70 p-5 rounded-xl border border-slate-200/80 space-y-3 relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Eficiência Fiscal (IRPF)
@@ -77,7 +74,7 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
           </div>
 
           <div>
-            <div className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+            <div className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
               {isentoIR ? (
                 <span className="text-emerald-700">100% ISENTO</span>
               ) : (
@@ -95,16 +92,16 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
         </div>
 
         {/* INSIGHT 2: Valorização & Margem Bruta */}
-        <div className="bg-gradient-to-br from-slate-50 to-teal-50/50 p-5 rounded-2xl border border-slate-200/80 space-y-3">
+        <div className="bg-slate-50/70 p-5 rounded-xl border border-slate-200/80 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Valorização do Imóvel
             </span>
-            <TrendingUp className="w-5 h-5 text-teal-600" />
+            <TrendingUp className="w-5 h-5 text-blue-600" />
           </div>
 
           <div>
-            <div className="text-xl font-extrabold text-teal-900 flex items-center gap-1.5">
+            <div className="text-lg sm:text-xl font-extrabold text-blue-900 flex items-center gap-1.5">
               {percentualLucroBruto >= 0 ? "+" : ""}
               {percentualLucroBruto.toFixed(1)}%
               <span className="text-xs font-normal text-slate-500">sobre compra</span>
@@ -118,7 +115,7 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
         </div>
 
         {/* INSIGHT 3: Ponto de Equilíbrio (Break-Even) */}
-        <div className="bg-gradient-to-br from-slate-50 to-indigo-50/50 p-5 rounded-2xl border border-slate-200/80 space-y-3">
+        <div className="bg-slate-50/70 p-5 rounded-xl border border-slate-200/80 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Ponto de Equilíbrio Mínimo
@@ -127,7 +124,7 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
           </div>
 
           <div>
-            <div className="text-xl font-extrabold text-indigo-950">
+            <div className="text-lg sm:text-xl font-extrabold text-slate-900">
               R$ {valorVendaMinimoBreakEven.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
             </div>
             <p className="text-xs text-slate-600 mt-1 leading-relaxed">

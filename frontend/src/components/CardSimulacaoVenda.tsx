@@ -6,6 +6,7 @@ import {
   Save,
   CheckCircle2,
   RefreshCw,
+  ArrowRight,
 } from "lucide-react";
 import { DadosImovel, DadosFinanciamento, ResultadoVenda, TaxaExtra } from "../types";
 import { formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
@@ -99,21 +100,26 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
   return (
     <div className="space-y-6">
       {/* CARD 3: FORMULÁRIO DE SIMULAÇÃO DE VENDA */}
-      <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 card-shadow space-y-5">
+      <div className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-5">
         {/* Cabeçalho limpo */}
-        <div className="border-b border-slate-100 pb-3 sm:pb-4">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-teal-600 flex-shrink-0" />
-            3. Simular Venda para Terceiro
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Abate automaticamente o saldo devedor do financiamento e calcula o valor líquido final.
-          </p>
+        <div className="border-b border-slate-100 pb-3 sm:pb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              3. Simular Venda para Terceiro
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Abate automaticamente o saldo devedor do financiamento e calcula o valor líquido final.
+            </p>
+          </div>
+          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+            Cálculo Instantâneo
+          </span>
         </div>
 
         <div className="space-y-4 text-xs">
           {/* ÚNICO CAMPO DE INPUT MANUAL: Valor de Venda (R$) */}
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200 space-y-1.5">
+          <div className="bg-slate-50/70 p-3.5 sm:p-4 rounded-xl border border-slate-200/80 space-y-1.5">
             <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
               Valor de Venda Simulado (R$)
             </label>
@@ -133,7 +139,7 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
                   setTextoValorVenda(formatCurrencyBRL(num));
                 }}
                 placeholder="400.000,00"
-                className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base font-extrabold text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition"
+                className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base font-extrabold text-slate-900 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
               />
             </div>
             <p className="text-[11px] text-slate-400">
@@ -189,18 +195,18 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
             valorVendaBase={valorVendaInput}
           />
 
-          {/* POSICIONAMENTO SOLICITADO: BOTÃO "SALVAR SIMULAÇÃO" APÓS O IMPOSTO/TAXAS, NO CANTO DIREITO */}
+          {/* BOTÃO "SALVAR SIMULAÇÃO" APÓS O IMPOSTO/TAXAS, NO CANTO DIREITO (Estilo Column Royal Blue) */}
           {onSalvarSimulacao && (
             <div className="pt-3 border-t border-slate-100 flex justify-end">
               <button
                 onClick={onSalvarSimulacao}
                 disabled={salvandoBanco}
-                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 w-full sm:w-auto"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 {salvandoBanco ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
                 ) : (
-                  <Save className="w-4 h-4 text-amber-400" />
+                  <Save className="w-4 h-4 text-white" />
                 )}
                 Salvar Simulação
               </button>
@@ -209,7 +215,7 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
 
           {/* Mensagem de confirmação de salvamento */}
           {mensagemBanco && (
-            <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-3 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
+            <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-3 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
               <span>{mensagemBanco}</span>
             </div>
@@ -217,13 +223,13 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
         </div>
       </div>
 
-      {/* CARD SEPARADO SOLICITADO: VALOR LÍQUIDO NO BOLSO AGORA */}
-      <div className="bg-slate-900 text-white rounded-2xl p-5 sm:p-6 card-shadow border border-teal-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* CARD SEPARADO: VALOR LÍQUIDO NO BOLSO AGORA (Estilo Column Bank UI) */}
+      <div className="bg-slate-900 text-white rounded-xl p-5 sm:p-6 shadow-md border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold block">
+          <span className="text-[11px] text-blue-400 uppercase tracking-widest font-bold block">
             VALOR LÍQUIDO NO BOLSO AGORA
           </span>
-          <span className="text-2xl sm:text-3xl font-black text-teal-400 mt-1 block">
+          <span className="text-2xl sm:text-3xl font-black text-white mt-1 block tracking-tight">
             R$ {resultadoVendaCompleto.resultadoLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
           <p className="text-[11px] text-slate-400 mt-1">
@@ -231,8 +237,9 @@ export const CardSimulacaoVenda: React.FC<CardSimulacaoVendaProps> = ({
           </p>
         </div>
 
-        <div className="bg-white/10 p-3.5 rounded-2xl backdrop-blur-md border border-white/10 self-end sm:self-auto">
-          <DollarSign className="w-8 h-8 text-teal-400" />
+        <div className="bg-blue-600/20 p-3.5 rounded-xl border border-blue-500/30 flex items-center gap-2 self-end sm:self-auto">
+          <DollarSign className="w-7 h-7 text-blue-400" />
+          <ArrowRight className="w-4 h-4 text-slate-400 hidden sm:block" />
         </div>
       </div>
     </div>
