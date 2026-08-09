@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Tag, Percent, DollarSign, Check, X } from "lucide-react";
+import { Plus, Trash2, Tag, Check, X } from "lucide-react";
 import { TaxaExtra } from "../types";
-import { formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
+import { parseCurrencyBRL } from "../utils/formatters";
 
 interface ListaDeducoesExtrasProps {
   taxasExtras: TaxaExtra[];
@@ -140,20 +140,20 @@ export const ListaDeducoesExtras: React.FC<ListaDeducoesExtrasProps> = ({
                 <button
                   type="button"
                   onClick={() => setTipo("FIXO")}
-                  className={`flex-1 py-1 text-[11px] font-bold flex items-center justify-center gap-0.5 ${
+                  className={`flex-1 py-1.5 text-xs font-extrabold transition ${
                     tipo === "FIXO" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  <DollarSign className="w-3 h-3" /> R$
+                  R$
                 </button>
                 <button
                   type="button"
                   onClick={() => setTipo("PERCENTUAL")}
-                  className={`flex-1 py-1 text-[11px] font-bold flex items-center justify-center gap-0.5 ${
+                  className={`flex-1 py-1.5 text-xs font-extrabold transition ${
                     tipo === "PERCENTUAL" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  <Percent className="w-3 h-3" /> %
+                  %
                 </button>
               </div>
             </div>
@@ -168,7 +168,7 @@ export const ListaDeducoesExtras: React.FC<ListaDeducoesExtrasProps> = ({
               <input
                 type="text"
                 required
-                placeholder={tipo === "FIXO" ? "1.500,00" : "1.5"}
+                placeholder={tipo === "FIXO" ? "1.500,00" : "1,5"}
                 value={textoValor}
                 onChange={(e) => setTextoValor(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:ring-1 focus:ring-teal-500"
