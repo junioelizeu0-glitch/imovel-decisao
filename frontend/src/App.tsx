@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { FormularioImovelFinanciamento } from "./components/FormularioImovelFinanciamento";
 import { CardSimulacaoVenda } from "./components/CardSimulacaoVenda";
@@ -107,54 +106,48 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFBFD] flex font-sans antialiased text-slate-800">
-      {/* Sidebar de Navegação Corporativa (Column Bank Design System) */}
-      <Sidebar onNovaAnalise={handleNovaAnalise} />
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
+      <Header onNovaAnalise={handleNovaAnalise} />
 
-      {/* Conteúdo Principal */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header onNovaAnalise={handleNovaAnalise} />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        {/* Bloco 1: Dados do Imóvel + Bloco 2: Dados do Financiamento */}
+        <FormularioImovelFinanciamento
+          dadosImovel={dadosImovel}
+          setDadosImovel={setDadosImovel}
+          dadosFinanciamento={dadosFinanciamento}
+          setDadosFinanciamento={setDadosFinanciamento}
+          taxaValorizacaoEstimada={6.5}
+          setTaxaValorizacaoEstimada={() => {}}
+        />
 
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-          {/* Bloco 1: Dados do Imóvel + Bloco 2: Dados do Financiamento */}
-          <FormularioImovelFinanciamento
+        {/* Bloco 3: Simular Venda para Terceiro */}
+        <div id="simular-venda">
+          <CardSimulacaoVenda
             dadosImovel={dadosImovel}
-            setDadosImovel={setDadosImovel}
             dadosFinanciamento={dadosFinanciamento}
-            setDadosFinanciamento={setDadosFinanciamento}
-            taxaValorizacaoEstimada={6.5}
-            setTaxaValorizacaoEstimada={() => {}}
+            onResultadoVendaAtualizado={setResultadoVendaAtual}
+            onSalvarSimulacao={handleSalvarSimulacao}
+            salvandoBanco={salvandoBanco}
+            mensagemBanco={mensagemBanco}
           />
+        </div>
 
-          {/* Bloco 3: Simular Venda para Terceiro */}
-          <div id="simular-venda">
-            <CardSimulacaoVenda
-              dadosImovel={dadosImovel}
-              dadosFinanciamento={dadosFinanciamento}
-              onResultadoVendaAtualizado={setResultadoVendaAtual}
-              onSalvarSimulacao={handleSalvarSimulacao}
-              salvandoBanco={salvandoBanco}
-              mensagemBanco={mensagemBanco}
+        {/* Gráfico Único Waterfall & Insights Inteligentes */}
+        {resultadoVendaAtual && (
+          <div className="space-y-6 sm:space-y-8">
+            {/* Gráfico 1: Waterfall da Venda em Destaque */}
+            <GraficoWaterfallVenda resultadoVenda={resultadoVendaAtual} />
+
+            {/* Insights Inteligentes */}
+            <InsightsInteligentes
+              resultadoVenda={resultadoVendaAtual}
+              valorCompraOriginal={dadosImovel.valorCompra}
+              custoAquisicaoExtra={dadosImovel.custoAquisicaoExtra}
+              saldoDevedorAtual={dadosFinanciamento.saldoDevedorAtual}
             />
           </div>
-
-          {/* Gráfico Único Waterfall & Insights Inteligentes */}
-          {resultadoVendaAtual && (
-            <div className="space-y-6 sm:space-y-8">
-              {/* Gráfico 1: Waterfall da Venda em Destaque */}
-              <GraficoWaterfallVenda resultadoVenda={resultadoVendaAtual} />
-
-              {/* Insights Inteligentes */}
-              <InsightsInteligentes
-                resultadoVenda={resultadoVendaAtual}
-                valorCompraOriginal={dadosImovel.valorCompra}
-                custoAquisicaoExtra={dadosImovel.custoAquisicaoExtra}
-                saldoDevedorAtual={dadosFinanciamento.saldoDevedorAtual}
-              />
-            </div>
-          )}
-        </main>
-      </div>
+        )}
+      </main>
     </div>
   );
 };

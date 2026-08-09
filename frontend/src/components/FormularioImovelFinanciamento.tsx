@@ -6,9 +6,6 @@ import {
   RefreshCw,
   Sparkles,
   MapPin,
-  CheckCircle2,
-  ShieldCheck,
-  Zap,
 } from "lucide-react";
 import { DadosImovel, DadosFinanciamento, EstimativaValorizacao } from "../types";
 import { formatCEP, formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
@@ -42,9 +39,6 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
   const [textoValorFinanciado, setTextoValorFinanciado] = useState("");
   const [textoSaldoDevedor, setTextoSaldoDevedor] = useState("");
   const [textoParcelaAtual, setTextoParcelaAtual] = useState("");
-
-  // Modalidade/Tipo Selecionado (Estilo Imagem 0 (1).jpg da Column Bank)
-  const [tipoOperacao, setTipoOperacao] = useState<"PADRAO" | "REINVESTIMENTO" | "UNICO_IMOVEL">("PADRAO");
 
   useEffect(() => {
     setTextoValorCompra(formatCurrencyBRL(dadosImovel.valorCompra));
@@ -171,100 +165,18 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
     );
   };
 
-  // Alternar modalidade de isenção
-  const handleSelecionarTipo = (tipo: "PADRAO" | "REINVESTIMENTO" | "UNICO_IMOVEL") => {
-    setTipoOperacao(tipo);
-    setDadosImovel((prev) => ({
-      ...prev,
-      reinvestimento180Dias: tipo === "REINVESTIMENTO",
-      isUnicoImovelAte440k: tipo === "UNICO_IMOVEL",
-    }));
-  };
-
   return (
     <div className="space-y-6">
-      {/* SELETOR DE MODALIDADE (Inspirado no Card Grid da Imagem 0 (1).jpg da Column Bank) */}
-      <div className="space-y-2">
-        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-          Modalidade de Venda & Isenção Fiscal
-        </label>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Card 1: Venda Padrão */}
-          <div
-            onClick={() => handleSelecionarTipo("PADRAO")}
-            className={`p-4 rounded-xl border transition cursor-pointer relative ${
-              tipoOperacao === "PADRAO"
-                ? "bg-white border-blue-600 shadow-md ring-1 ring-blue-600/20"
-                : "bg-white border-slate-200 hover:border-slate-300"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <Zap className={`w-5 h-5 ${tipoOperacao === "PADRAO" ? "text-blue-600" : "text-slate-400"}`} />
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                Padrão
-              </span>
-            </div>
-            <div className="font-extrabold text-xs text-slate-900">Venda Direta a Terceiro</div>
-            <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-              Cálculo padrão com amortização de saldo devedor, corretagem e IRPF de ganho de capital.
-            </p>
-          </div>
-
-          {/* Card 2: Reinvestimento 180 Dias */}
-          <div
-            onClick={() => handleSelecionarTipo("REINVESTIMENTO")}
-            className={`p-4 rounded-xl border transition cursor-pointer relative ${
-              tipoOperacao === "REINVESTIMENTO"
-                ? "bg-white border-blue-600 shadow-md ring-1 ring-blue-600/20"
-                : "bg-white border-slate-200 hover:border-slate-300"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <ShieldCheck className={`w-5 h-5 ${tipoOperacao === "REINVESTIMENTO" ? "text-blue-600" : "text-slate-400"}`} />
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                Isenção 180d
-              </span>
-            </div>
-            <div className="font-extrabold text-xs text-slate-900">Reinvestimento (Lei 11.196)</div>
-            <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-              Isenção de 100% de IR caso o valor da venda seja reinvestido em novo imóvel residencial em 180 dias.
-            </p>
-          </div>
-
-          {/* Card 3: Único Imóvel até 440k */}
-          <div
-            onClick={() => handleSelecionarTipo("UNICO_IMOVEL")}
-            className={`p-4 rounded-xl border transition cursor-pointer relative ${
-              tipoOperacao === "UNICO_IMOVEL"
-                ? "bg-white border-blue-600 shadow-md ring-1 ring-blue-600/20"
-                : "bg-white border-slate-200 hover:border-slate-300"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <CheckCircle2 className={`w-5 h-5 ${tipoOperacao === "UNICO_IMOVEL" ? "text-blue-600" : "text-slate-400"}`} />
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                Até R$ 440k
-              </span>
-            </div>
-            <div className="font-extrabold text-xs text-slate-900">Único Imóvel Residencial</div>
-            <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-              Isenção de IR para venda do único imóvel de valor até R$ 440.000 (sem vendas nos últimos 5 anos).
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Grid de 2 Colunas Responsivo para Celular e Desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* BLOCO 1: DADOS DO IMÓVEL */}
-        <div id="imovel" className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4 sm:space-y-5">
+        <div id="imovel" className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 card-shadow space-y-4 sm:space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <Building2 className="w-4 h-4 text-teal-600 flex-shrink-0" />
               1. Dados do Imóvel
             </h3>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700">
               Imóvel
             </span>
           </div>
@@ -272,7 +184,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
           {/* Campo CEP */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-blue-600" /> CEP (Formato 00000-000)
+              <MapPin className="w-3.5 h-3.5 text-teal-600" /> CEP (Formato 00000-000)
             </label>
             <div className="relative">
               <input
@@ -281,10 +193,10 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 value={dadosImovel.cep}
                 onChange={(e) => handleCepChange(e.target.value)}
                 placeholder="00000-000"
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition"
               />
               {buscandoCep && (
-                <RefreshCw className="w-4 h-4 animate-spin absolute right-3 top-2.5 text-blue-600" />
+                <RefreshCw className="w-4 h-4 animate-spin absolute right-3 top-2.5 text-teal-600" />
               )}
             </div>
           </div>
@@ -300,7 +212,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 value={dadosImovel.endereco}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, endereco: e.target.value })}
                 placeholder="Ex: Rua Domingos Marcelino, Kennedy"
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 transition"
               />
               <button
                 type="button"
@@ -321,13 +233,13 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
 
           {/* Resultado da Busca de Valorização */}
           {resultadoBusca && (
-            <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3 space-y-1.5 text-xs">
-              <div className="flex items-center justify-between text-blue-900 font-bold">
+            <div className="bg-teal-50/60 border border-teal-100 rounded-xl p-3 space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-teal-900 font-bold">
                 <span className="flex items-center gap-1 text-xs">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                  <Sparkles className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
                   Potencial Estimado:
                 </span>
-                <span className="text-xs font-extrabold text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-200">
+                <span className="text-xs font-extrabold text-teal-700 bg-white px-2 py-0.5 rounded-md border border-teal-200">
                   {resultadoBusca.taxaValorizacaoAnualEstimada}% a.a.
                 </span>
               </div>
@@ -344,7 +256,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 value={dadosImovel.cidade}
                 placeholder="Ex: Santa Luzia"
                 onChange={(e) => setDadosImovel({ ...dadosImovel, cidade: e.target.value })}
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
               />
             </div>
             <div>
@@ -355,7 +267,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 placeholder="Ex: MG"
                 value={dadosImovel.estado}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, estado: e.target.value.toUpperCase() })}
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2 text-xs uppercase font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs uppercase font-bold"
               />
             </div>
           </div>
@@ -378,7 +290,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                     setDadosImovel((prev) => ({ ...prev, valorCompra: num }));
                     setTextoValorCompra(formatCurrencyBRL(num));
                   }}
-                  className="w-full bg-slate-50/70 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-slate-900"
                 />
               </div>
             </div>
@@ -390,7 +302,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 type="number"
                 value={dadosImovel.anoCompra || ""}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, anoCompra: Number(e.target.value) })}
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium"
               />
             </div>
           </div>
@@ -413,7 +325,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                     setDadosImovel((prev) => ({ ...prev, custoAquisicaoExtra: num }));
                     setTextoCustoExtra(formatCurrencyBRL(num));
                   }}
-                  className="w-full bg-slate-50/70 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs"
                 />
               </div>
             </div>
@@ -434,7 +346,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                     setDadosImovel((prev) => ({ ...prev, valorMercadoAtual: num }));
                     setTextoValorMercado(formatCurrencyBRL(num));
                   }}
-                  className="w-full bg-slate-50/70 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-blue-700"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-teal-700"
                 />
               </div>
             </div>
@@ -442,10 +354,10 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
         </div>
 
         {/* BLOCO 2: DADOS DO FINANCIAMENTO */}
-        <div id="financiamento" className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4 sm:space-y-5">
+        <div id="financiamento" className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 card-shadow space-y-4 sm:space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Landmark className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <Landmark className="w-4 h-4 text-teal-600 flex-shrink-0" />
               2. Dados do Financiamento
             </h3>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700">
@@ -460,7 +372,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <select
                 value={dadosFinanciamento.banco}
                 onChange={(e) => setDadosFinanciamento({ ...dadosFinanciamento, banco: e.target.value })}
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
               >
                 <option value="Caixa Econômica Federal">Caixa Econômica Federal</option>
                 <option value="Itaú Unibanco">Itaú Unibanco</option>
@@ -480,7 +392,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                     sistemaAmortizacao: e.target.value as "SAC" | "PRICE",
                   })
                 }
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
               >
                 <option value="SAC">SAC (Amortização Constante)</option>
                 <option value="PRICE">PRICE (Tabela Price)</option>
@@ -504,7 +416,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                     setDadosFinanciamento((prev) => ({ ...prev, valorFinanciado: num }));
                     setTextoValorFinanciado(formatCurrencyBRL(num));
                   }}
-                  className="w-full bg-slate-50/70 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-slate-900"
                 />
               </div>
             </div>
@@ -519,7 +431,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                   onChange={(e) =>
                     setDadosFinanciamento({ ...dadosFinanciamento, taxaJurosAnual: Number(e.target.value) })
                   }
-                  className="w-full bg-slate-50/70 border border-slate-200 rounded-xl pr-8 pl-3 py-2 text-xs font-semibold text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pr-8 pl-3 py-2 text-xs font-semibold text-slate-900"
                 />
                 <span className="absolute right-3 top-2 text-xs text-slate-400 font-semibold">%</span>
               </div>
@@ -540,7 +452,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                     numeroParcelasTotal: Number(e.target.value),
                   })
                 }
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium"
               />
             </div>
             <div>
@@ -552,13 +464,13 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 onChange={(e) =>
                   setDadosFinanciamento({ ...dadosFinanciamento, parcelasPagas: Number(e.target.value) })
                 }
-                className="w-full bg-slate-50/70 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-blue-700"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-teal-700"
               />
             </div>
           </div>
 
           {/* Saldo Devedor Atual e Valor da Parcela */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
@@ -582,7 +494,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                     }));
                     setTextoSaldoDevedor(formatCurrencyBRL(num));
                   }}
-                  className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-600/20"
+                  className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-teal-500/20"
                 />
               </div>
             </div>
@@ -603,7 +515,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                     setDadosFinanciamento((prev) => ({ ...prev, valorParcelaAtual: num }));
                     setTextoParcelaAtual(formatCurrencyBRL(num));
                   }}
-                  className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-blue-700"
+                  className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-teal-700"
                 />
               </div>
             </div>
