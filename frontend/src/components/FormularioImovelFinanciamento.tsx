@@ -4,12 +4,10 @@ import {
   Landmark,
   Search,
   CheckCircle2,
-  HelpCircle,
   RefreshCw,
   Sparkles,
-  DollarSign,
-  Calendar,
-  Percent,
+  Save,
+  MapPin,
 } from "lucide-react";
 import { DadosImovel, DadosFinanciamento, EstimativaValorizacao } from "../types";
 
@@ -19,8 +17,11 @@ interface FormularioProps {
   dadosFinanciamento: DadosFinanciamento;
   setDadosFinanciamento: React.Dispatch<React.SetStateAction<DadosFinanciamento>>;
   onSimular: () => void;
+  onSalvarNoBanco: () => Promise<void>;
   taxaValorizacaoEstimada: number;
   setTaxaValorizacaoEstimada: React.Dispatch<React.SetStateAction<number>>;
+  salvandoBanco: boolean;
+  mensagemBanco: string | null;
 }
 
 export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
@@ -29,16 +30,22 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
   dadosFinanciamento,
   setDadosFinanciamento,
   onSimular,
+  onSalvarNoBanco,
   taxaValorizacaoEstimada,
   setTaxaValorizacaoEstimada,
+  salvandoBanco,
+  mensagemBanco,
 }) => {
   const [buscandoValorizacao, setBuscandoValorizacao] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
   const [resultadoBusca, setResultadoBusca] = useState<EstimativaValorizacao | null>(null);
   const [erroBusca, setErroBusca] = useState<string | null>(null);
 
   // Recálculo automático do saldo devedor e parcela quando dados do financiamento mudam
   useEffect(() => {
-    recalcularFinanciamentoApi();
+    if (dadosFinanciamento.valorFinanciado > 0) {
+      recalcularFinanciamentoApi();
+    }
   }, [
     dadosFinanciamento.valorFinanciado,
     dadosFinanciamento.taxaJurosAnual,
@@ -75,58 +82,128 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
     }
   };
 
-  const handleBuscarValorizacao = async () => {
-    if (!dadosImovel.endereco) {
-      setErroBusca("Informe pelo menos a rua ou bairro no endereço.");
-      return;
+  // Busca Automática de Endereço via CEP (ViaCEP API)
+  const handleCepChange = async (cepInput: string) => {
+    setDadosImovel((prev) => ({ ...prev, cep: cepInput }));
+
+    const cepLimpo = cepInput.replace(/\D/g, "");
+    if (cepLimpo.length === 8) {
+      setBuscandoCep(true);
+      setErroBusca(null);
+
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        if (response.ok) {
+          const data = await response.json();
+          if (!data.erro) {
+            const novoEndereco = `${data.logradouro}${data.bairro ? `, ${data.bairro}` : ""}`;
+            const novaCidade = data.localidade || "";
+            const novoEstado = data.uf || "";
+
+            setDadosImovel((prev) => ({
+              ...prev,
+              endereco: novoEndereco,
+              cidade: novaCidade,
+              estado: novoEstado,
+            }));
+
+            // Buscar valorização automaticamente com o endereço preenchido pelo CEP
+            buscarValorizacaoAutomatica(novoEndereco, novaCidade, novoEstado);
+          } else {
+            setErroBusca("CEP não encontrado.");
+          }
+        }
+      } catch (e) {
+        setErroBusca("Erro ao buscar CEP. Verifique a conexão.");
+      } finally {
+        setBuscandoCep(false);
+      }
     }
+  };
 
+  const buscarValorizacaoAutomatica = async (
+    end: string,
+    cid?: string,
+    uf?: string
+  ) => {
+    if (!end) return;
     setBuscandoValorizacao(true);
-    setErroBusca(null);
-
     try {
       const params = new URLSearchParams({
-        endereco: dadosImovel.endereco,
-        cidade: dadosImovel.cidade,
-        estado: dadosImovel.estado,
+        endereco: end,
+        cidade: cid || "",
+        estado: uf || "",
       });
-
       const res = await fetch(`/api/valorizacao/buscar?${params}`);
       if (res.ok) {
         const data: EstimativaValorizacao = await res.json();
         setResultadoBusca(data);
         setTaxaValorizacaoEstimada(data.taxaValorizacaoAnualEstimada);
-      } else {
-        setErroBusca("Não foi possível realizar a busca automática no momento.");
       }
     } catch (e) {
-      setErroBusca("Falha na conexão com o servidor de inteligência imobiliária.");
+      console.warn("Falha na valorização", e);
     } finally {
       setBuscandoValorizacao(false);
     }
   };
 
+  const handleBuscarValorizacao = async () => {
+    if (!dadosImovel.endereco) {
+      setErroBusca("Informe pelo menos a rua ou bairro no endereço.");
+      return;
+    }
+    await buscarValorizacaoAutomatica(
+      dadosImovel.endereco,
+      dadosImovel.cidade,
+      dadosImovel.estado
+    );
+  };
+
   return (
     <div className="space-y-6">
-      {/* Título da Seção */}
+      {/* Título da Seção & Ações */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl card-shadow border border-slate-100">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <Building2 className="w-6 h-6 text-teal-600" />
-            Dados do Imóvel & Financiamento
+            Cadastro do Imóvel & Financiamento
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            Preencha os dois blocos abaixo para gerar a análise comparativa automatizada de venda versus aluguel.
+            Digite o CEP para buscar o endereço automaticamente ou preencha os dados abaixo.
           </p>
         </div>
-        <button
-          onClick={onSimular}
-          className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 self-start md:self-auto"
-        >
-          <Sparkles className="w-4 h-4" />
-          Gerar Comparativo Lado a Lado
-        </button>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={onSalvarNoBanco}
+            disabled={salvandoBanco}
+            className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm px-5 py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+          >
+            {salvandoBanco ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+            ) : (
+              <Save className="w-4 h-4 text-amber-400" />
+            )}
+            Salvar no Banco de Dados
+          </button>
+
+          <button
+            onClick={onSimular}
+            className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            Gerar Comparativo
+          </button>
+        </div>
       </div>
+
+      {/* Mensagem de confirmação de salvamento no banco */}
+      {mensagemBanco && (
+        <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-4 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <span>{mensagemBanco}</span>
+        </div>
+      )}
 
       {/* Grid de 2 Colunas Lado a Lado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -142,17 +219,40 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </span>
           </div>
 
-          {/* Endereço Completo com Busca de Valorização */}
+          {/* Campo CEP com busca automática */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-teal-600" /> CEP (Busca Automática de Endereço)
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                maxLength={9}
+                value={dadosImovel.cep}
+                onChange={(e) => handleCepChange(e.target.value)}
+                placeholder="Ex: 01310-100"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 transition"
+              />
+              {buscandoCep && (
+                <RefreshCw className="w-4 h-4 animate-spin absolute right-3 top-3 text-teal-600" />
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Ao digitar o CEP com 8 dígitos, o endereço, cidade e UF serão preenchidos automaticamente.
+            </p>
+          </div>
+
+          {/* Endereço Completo com botão de Valorização */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Endereço do Imóvel (Rua, Bairro)
+              Endereço (Rua, Número, Bairro)
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={dadosImovel.endereco}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, endereco: e.target.value })}
-                placeholder="Ex: Av. Paulista, 1000 - Bela Vista"
+                placeholder="Ex: Av. Paulista, 1000"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 transition"
               />
               <button
@@ -160,7 +260,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 onClick={handleBuscarValorizacao}
                 disabled={buscandoValorizacao}
                 className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap shadow-sm"
-                title="Estimativa inteligente por endereço"
+                title="Estimativa por região"
               >
                 {buscandoValorizacao ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -186,58 +286,35 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 </span>
               </div>
               <p className="text-slate-600 leading-relaxed">{resultadoBusca.resumo}</p>
-              {resultadoBusca.fontes.length > 0 && (
-                <div className="pt-1 text-[11px] text-slate-500">
-                  <span className="font-semibold text-slate-700">Fontes consultadas: </span>
-                  {resultadoBusca.fontes.map((f, idx) => (
-                    <a
-                      key={idx}
-                      href={f.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline text-teal-700 hover:text-teal-900 ml-1"
-                    >
-                      {f.titulo}
-                    </a>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
-          {/* Cidade, Estado e CEP */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Cidade e Estado */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label>
               <input
                 type="text"
                 value={dadosImovel.cidade}
+                placeholder="Ex: São Paulo"
                 onChange={(e) => setDadosImovel({ ...dadosImovel, cidade: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">UF</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">UF (Estado)</label>
               <input
                 type="text"
                 maxLength={2}
+                placeholder="Ex: SP"
                 value={dadosImovel.estado}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, estado: e.target.value.toUpperCase() })}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm uppercase"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">CEP</label>
-              <input
-                type="text"
-                value={dadosImovel.cep}
-                onChange={(e) => setDadosImovel({ ...dadosImovel, cep: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
           </div>
 
-          {/* Valores de Compra e Custos Extras */}
+          {/* Valores de Compra e Ano */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -247,6 +324,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-semibold">R$</span>
                 <input
                   type="number"
+                  placeholder="0,00"
                   value={dadosImovel.valorCompra || ""}
                   onChange={(e) => setDadosImovel({ ...dadosImovel, valorCompra: Number(e.target.value) })}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-semibold text-slate-900"
@@ -259,7 +337,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               </label>
               <input
                 type="number"
-                value={dadosImovel.anoCompra}
+                value={dadosImovel.anoCompra || ""}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, anoCompra: Number(e.target.value) })}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium"
               />
@@ -269,12 +347,13 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">
-                Custos de Aquisição Extras (ITBI, Escritura)
+                Custos Extras (ITBI, Escritura)
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-semibold">R$</span>
                 <input
                   type="number"
+                  placeholder="0,00"
                   value={dadosImovel.custoAquisicaoExtra || ""}
                   onChange={(e) =>
                     setDadosImovel({ ...dadosImovel, custoAquisicaoExtra: Number(e.target.value) })
@@ -285,12 +364,13 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">
-                Valor de Mercado Atual Estimado (R$)
+                Valor de Mercado Atual (R$)
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-semibold">R$</span>
                 <input
                   type="number"
+                  placeholder="0,00"
                   value={dadosImovel.valorMercadoAtual || ""}
                   onChange={(e) =>
                     setDadosImovel({ ...dadosImovel, valorMercadoAtual: Number(e.target.value) })
@@ -336,10 +416,10 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </span>
           </div>
 
-          {/* Banco e Sistema de Amortização */}
+          {/* Banco e Amortização */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Instituição Financeira</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Banco</label>
               <select
                 value={dadosFinanciamento.banco}
                 onChange={(e) => setDadosFinanciamento({ ...dadosFinanciamento, banco: e.target.value })}
@@ -354,7 +434,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Sistema de Amortização</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Amortização</label>
               <select
                 value={dadosFinanciamento.sistemaAmortizacao}
                 onChange={(e) =>
@@ -379,6 +459,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-semibold">R$</span>
                 <input
                   type="number"
+                  placeholder="0,00"
                   value={dadosFinanciamento.valorFinanciado || ""}
                   onChange={(e) =>
                     setDadosFinanciamento({ ...dadosFinanciamento, valorFinanciado: Number(e.target.value) })
@@ -393,6 +474,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 <input
                   type="number"
                   step="0.01"
+                  placeholder="0,00"
                   value={dadosFinanciamento.taxaJurosAnual || ""}
                   onChange={(e) =>
                     setDadosFinanciamento({ ...dadosFinanciamento, taxaJurosAnual: Number(e.target.value) })
@@ -407,10 +489,11 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
           {/* Parcelas Total e Parcelas Pagas */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Nº Parcelas Contratadas</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Nº Parcelas Total</label>
               <input
                 type="number"
-                value={dadosFinanciamento.numeroParcelasTotal}
+                placeholder="Ex: 360"
+                value={dadosFinanciamento.numeroParcelasTotal || ""}
                 onChange={(e) =>
                   setDadosFinanciamento({
                     ...dadosFinanciamento,
@@ -421,10 +504,11 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Parcelas Já Pagas</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Parcelas Pagas</label>
               <input
                 type="number"
-                value={dadosFinanciamento.parcelasPagas}
+                placeholder="Ex: 24"
+                value={dadosFinanciamento.parcelasPagas || ""}
                 onChange={(e) =>
                   setDadosFinanciamento({ ...dadosFinanciamento, parcelasPagas: Number(e.target.value) })
                 }
@@ -446,6 +530,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-semibold">R$</span>
                 <input
                   type="number"
+                  placeholder="0,00"
                   value={dadosFinanciamento.saldoDevedorAtual || ""}
                   onChange={(e) =>
                     setDadosFinanciamento({
@@ -461,12 +546,13 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Valor da Parcela Mensal Atual
+                Parcela Mensal Atual
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-semibold">R$</span>
                 <input
                   type="number"
+                  placeholder="0,00"
                   value={dadosFinanciamento.valorParcelaAtual || ""}
                   onChange={(e) =>
                     setDadosFinanciamento({
