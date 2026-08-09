@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   TrendingUp,
   DollarSign,
   AlertTriangle,
   Award,
-  CheckCircle,
   Clock,
-  ArrowRight,
   ShieldCheck,
-  Percent,
-  ChevronRight,
   PieChart as PieIcon,
+  Save,
+  CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 import { ResultadoAluguel } from "../types";
 import { DonutChartCard } from "./DonutChartCard";
+import { GraficosComparativos } from "./GraficosComparativos";
 import { formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
 
 interface DashboardProps {
@@ -26,6 +26,7 @@ interface DashboardProps {
   setTaxaValorizacaoAnual: (val: number) => void;
   taxaCDIAnual: number;
   setTaxaCDIAnual: (val: number) => void;
+  onSalvarSimulacaoHistorico?: () => Promise<void>;
 }
 
 export const DashboardComparativo: React.FC<DashboardProps> = ({
@@ -38,6 +39,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
   setTaxaValorizacaoAnual,
   taxaCDIAnual,
   setTaxaCDIAnual,
+  onSalvarSimulacaoHistorico,
 }) => {
   const {
     opcaoRecomendada,
@@ -50,30 +52,65 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
     anosAteQuitar,
     valorImovelProjetado,
     fluxoCaixaMensalLiquido,
-    fluxoNegativo,
     alertaRisco,
     irAluguelMensal,
   } = resultado;
 
-  const [textoAluguel, setTextoAluguel] = useState("");
-  const [textoCustosExtras, setTextoCustosExtras] = useState("");
+  const [salvandoHistorico, setSalvandoHistorico] = useState(false);
+  const [mensagemHistorico, setMensagemHistorico] = useState<string | null>(null);
 
-  useEffect(() => {
-    setTextoAluguel(formatCurrencyBRL(valorAluguelMensal));
-    setTextoCustosExtras(formatCurrencyBRL(custosMensaisExtras));
-  }, [valorAluguelMensal, custosMensaisExtras]);
+  const [textoAluguel, setTextoAluguel] = useState(formatCurrencyBRL(valorAluguelMensal));
+  const [textoCustosExtras, setTextoCustosExtras] = useState(formatCurrencyBRL(custosMensaisExtras));
+
+  const handleSalvarHistorico = async () => {
+    if (!onSalvarSimulacaoHistorico) return;
+    setSalvandoHistorico(true);
+    setMensagemHistorico(null);
+    try {
+      await onSalvarSimulacaoHistorico();
+      setMensagemHistorico("✅ Simulação salva no histórico de banco de dados com sucesso!");
+    } catch (e) {
+      setMensagemHistorico("❌ Erro ao salvar histórico de simulação.");
+    } finally {
+      setSalvandoHistorico(false);
+    }
+  };
 
   return (
     <div className="space-y-8" id="simulador">
       {/* 1. Painel de Parâmetros de Simulação Rápida */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-            <PieIcon className="w-4 h-4 text-teal-600" />
-            Ajustes Finos do Cenário de Aluguel & Rendimento
-          </h3>
-          <span className="text-xs text-slate-400">Atualização em Tempo Real</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <PieIcon className="w-4 h-4 text-teal-600" />
+              Ajustes Finos do Cenário de Aluguel & Rendimento
+            </h3>
+            <p className="text-xs text-slate-500">Recálculo automático dos gráficos em tempo real.</p>
+          </div>
+
+          {onSalvarSimulacaoHistorico && (
+            <button
+              onClick={handleSalvarHistorico}
+              disabled={salvandoHistorico}
+              className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm self-stretch sm:self-auto justify-center"
+            >
+              {salvandoHistorico ? (
+                <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+              ) : (
+                <Save className="w-4 h-4 text-amber-400" />
+              )}
+              Salvar Simulação no Histórico
+            </button>
+          )}
         </div>
+
+        {mensagemHistorico && (
+          <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-3 rounded-xl text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{mensagemHistorico}</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
@@ -152,7 +189,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* 2. Banner de Resultado Principal / Vencedor */}
+      {/* 2. Banner de Resultado Principal */}
       <div
         className={`rounded-2xl p-6 sm:p-8 card-shadow border-2 transition-all ${
           opcaoRecomendada === "ALUGAR"
@@ -210,7 +247,10 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* 3. Gráfico Donut da Composição do Aluguel */}
+      {/* 3. OS 4 GRÁFICOS EM DESTAQUE (RECHARTS) */}
+      <GraficosComparativos resultado={resultado} taxaCDIAnual={taxaCDIAnual} />
+
+      {/* 4. Gráfico Donut da Composição do Aluguel */}
       <DonutChartCard
         valorAluguel={valorAluguelMensal}
         valorParcela={resultadoVendaAgora.saldoDevedorAbatido > 0 ? Math.max(0, resultado.valorAluguelMensal - fluxoCaixaMensalLiquido - custosMensaisExtras - irAluguelMensal) : 0}
@@ -219,7 +259,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
         fluxoLiquido={fluxoCaixaMensalLiquido}
       />
 
-      {/* 4. Quadro Comparativo Lado a Lado */}
+      {/* 5. Quadro Comparativo Lado a Lado em 2 Colunas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* COLUNA 1: VENDER AGORA */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow card-shadow-hover space-y-6 flex flex-col justify-between">

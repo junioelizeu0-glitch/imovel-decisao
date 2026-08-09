@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Header } from "./components/Header";
 import { FormularioImovelFinanciamento } from "./components/FormularioImovelFinanciamento";
 import { DashboardComparativo } from "./components/DashboardComparativo";
 import { DadosImovel, DadosFinanciamento, ResultadoAluguel } from "./types";
 
 export const App: React.FC = () => {
-  // Estado com campos limpos por padrão
+  // Estado inicial limpo
   const [dadosImovel, setDadosImovel] = useState<DadosImovel>({
     endereco: "",
     cidade: "",
@@ -39,9 +39,10 @@ export const App: React.FC = () => {
 
   const [resultado, setResultado] = useState<ResultadoAluguel | null>(null);
 
-  // Estados de salvamento no banco de dados
+  // Estados de notificação
   const [salvandoBanco, setSalvandoBanco] = useState(false);
   const [mensagemBanco, setMensagemBanco] = useState<string | null>(null);
+  const [imovelSalvoId, setImovelSalvoId] = useState<string | null>(null);
 
   // Função para limpar todos os campos e iniciar nova análise
   const handleNovaAnalise = () => {
@@ -72,26 +73,59 @@ export const App: React.FC = () => {
     setCustosMensaisExtras(0);
     setResultado(null);
     setMensagemBanco(null);
+    setImovelSalvoId(null);
   };
 
-  // Executa a simulação sempre que houver dados mínimos inseridos
-  useEffect(() => {
-    if (
-      dadosImovel.valorCompra > 0 ||
-      dadosFinanciamento.valorFinanciado > 0 ||
-      valorAluguelMensal > 0
-    ) {
-      executarSimulacao();
+  // BOTÃO 1: "Salvar no Banco de Dados" (APENAS DADOS DE ENTRADA IMÓVEL + FINANCIAMENTO)
+  const handleSalvarNoBanco = async () => {
+    if (!dadosImovel.endereco || !dadosImovel.cidade || !dadosImovel.cep) {
+      setMensagemBanco("⚠️ Preencha pelo menos o CEP e endereço do imóvel antes de salvar no banco.");
+      return;
     }
-  }, [
-    dadosImovel,
-    dadosFinanciamento,
-    valorAluguelMensal,
-    custosMensaisExtras,
-    taxaValorizacaoEstimada,
-    taxaCDIAnual,
-  ]);
 
+    setSalvandoBanco(true);
+    setMensagemBanco(null);
+
+    try {
+      const resImovel = await fetch("/api/imoveis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endereco: dadosImovel.endereco,
+          cidade: dadosImovel.cidade,
+          estado: dadosImovel.estado,
+          cep: dadosImovel.cep,
+          valor_compra: dadosImovel.valorCompra,
+          data_compra: dadosImovel.dataCompra,
+          custo_aquisicao_extra: dadosImovel.custoAquisicaoExtra,
+          valor_mercado_atual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
+          banco: dadosFinanciamento.banco,
+          valor_financiado: dadosFinanciamento.valorFinanciado,
+          taxa_juros_anual: dadosFinanciamento.taxaJurosAnual,
+          sistema_amortizacao: dadosFinanciamento.sistemaAmortizacao,
+          numero_parcelas_total: dadosFinanciamento.numeroParcelasTotal,
+          parcelas_pagas: dadosFinanciamento.parcelasPagas,
+          saldo_devedor_manual: dadosFinanciamento.saldoDevedorAtual,
+        }),
+      });
+
+      if (resImovel.ok) {
+        const imovelCriado = await resImovel.json();
+        setImovelSalvoId(imovelCriado.id);
+        setMensagemBanco(
+          `✅ Sucesso! Dados cadastrais do Imóvel & Financiamento gravados no banco (ID: ${imovelCriado.id}).`
+        );
+      } else {
+        setMensagemBanco("❌ Erro ao salvar dados de entrada no banco. Verifique os campos.");
+      }
+    } catch (e) {
+      setMensagemBanco("❌ Falha de conexão ao salvar no banco de dados.");
+    } finally {
+      setSalvandoBanco(false);
+    }
+  };
+
+  // BOTÃO 2: "Gerar Comparativo" (RODA CÁLCULOS FISCAIS/FINANCEIROS E RENDERIZA GRÁFICOS)
   const executarSimulacao = async () => {
     try {
       const payload = {
@@ -131,77 +165,33 @@ export const App: React.FC = () => {
     }
   };
 
-  // Salva no banco de dados
-  const handleSalvarNoBanco = async () => {
-    if (!dadosImovel.endereco || !dadosImovel.cidade || !dadosImovel.cep) {
-      setMensagemBanco("⚠️ Preencha pelo menos o CEP e endereço do imóvel antes de salvar no banco.");
-      return;
-    }
+  // AÇÃO OPCIONAL NO DASHBOARD: "Salvar Simulação no Histórico do Banco"
+  const handleSalvarSimulacaoHistorico = async () => {
+    if (!resultado) return;
 
-    setSalvandoBanco(true);
-    setMensagemBanco(null);
-
-    try {
-      const resImovel = await fetch("/api/imoveis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endereco: dadosImovel.endereco,
-          cidade: dadosImovel.cidade,
-          estado: dadosImovel.estado,
-          cep: dadosImovel.cep,
-          valor_compra: dadosImovel.valorCompra,
-          data_compra: dadosImovel.dataCompra,
-          custo_aquisicao_extra: dadosImovel.custoAquisicaoExtra,
-          valor_mercado_atual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
-          banco: dadosFinanciamento.banco,
-          valor_financiado: dadosFinanciamento.valorFinanciado,
-          taxa_juros_anual: dadosFinanciamento.taxaJurosAnual,
-          sistema_amortizacao: dadosFinanciamento.sistemaAmortizacao,
-          numero_parcelas_total: dadosFinanciamento.numeroParcelasTotal,
-          parcelas_pagas: dadosFinanciamento.parcelasPagas,
-          saldo_devedor_manual: dadosFinanciamento.saldoDevedorAtual,
-        }),
-      });
-
-      if (resImovel.ok) {
-        const imovelCriado = await resImovel.json();
-
-        if (valorAluguelMensal > 0) {
-          await fetch("/api/simulacoes/aluguel", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              imovelId: imovelCriado.id,
-              valorMercadoAtual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
-              saldoDevedorAtual: dadosFinanciamento.saldoDevedorAtual,
-              taxaJurosFinanciamentoAnual: dadosFinanciamento.taxaJurosAnual,
-              sistemaAmortizacao: dadosFinanciamento.sistemaAmortizacao,
-              parcelasRestantes: Math.max(
-                1,
-                dadosFinanciamento.numeroParcelasTotal - dadosFinanciamento.parcelasPagas
-              ),
-              valorParcelaAtual: dadosFinanciamento.valorParcelaAtual,
-              valorAluguelMensal,
-              custosMensaisExtras,
-              taxaValorizacaoAnualEstimada: taxaValorizacaoEstimada,
-              taxaCDIAnualRef: taxaCDIAnual,
-              valorCompra: dadosImovel.valorCompra,
-              custoAquisicaoExtra: dadosImovel.custoAquisicaoExtra,
-              anoCompra: dadosImovel.anoCompra,
-            }),
-          });
-        }
-
-        setMensagemBanco(`✅ Sucesso! Imóvel e Financiamento salvos no banco com ID: ${imovelCriado.id}`);
-      } else {
-        setMensagemBanco("❌ Erro ao salvar dados no banco. Verifique os valores preenchidos.");
-      }
-    } catch (e) {
-      setMensagemBanco("❌ Falha de conexão ao salvar no banco de dados.");
-    } finally {
-      setSalvandoBanco(false);
-    }
+    await fetch("/api/simulacoes/aluguel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imovelId: imovelSalvoId || undefined,
+        valorMercadoAtual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
+        saldoDevedorAtual: dadosFinanciamento.saldoDevedorAtual,
+        taxaJurosFinanciamentoAnual: dadosFinanciamento.taxaJurosAnual,
+        sistemaAmortizacao: dadosFinanciamento.sistemaAmortizacao,
+        parcelasRestantes: Math.max(
+          1,
+          dadosFinanciamento.numeroParcelasTotal - dadosFinanciamento.parcelasPagas
+        ),
+        valorParcelaAtual: dadosFinanciamento.valorParcelaAtual,
+        valorAluguelMensal,
+        custosMensaisExtras,
+        taxaValorizacaoAnualEstimada: taxaValorizacaoEstimada,
+        taxaCDIAnualRef: taxaCDIAnual,
+        valorCompra: dadosImovel.valorCompra,
+        custoAquisicaoExtra: dadosImovel.custoAquisicaoExtra,
+        anoCompra: dadosImovel.anoCompra,
+      }),
+    });
   };
 
   return (
@@ -209,7 +199,7 @@ export const App: React.FC = () => {
       <Header onNovaAnalise={handleNovaAnalise} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Formulário de Entrada com CEP Automático & Salvamento no Banco */}
+        {/* Formulário de Entrada com CEP Automático */}
         <FormularioImovelFinanciamento
           dadosImovel={dadosImovel}
           setDadosImovel={setDadosImovel}
@@ -223,8 +213,8 @@ export const App: React.FC = () => {
           mensagemBanco={mensagemBanco}
         />
 
-        {/* Dashboard de Comparação e Donut Chart */}
-        {resultado && (dadosImovel.valorCompra > 0 || dadosFinanciamento.valorFinanciado > 0) && (
+        {/* Dashboard de Comparação e 4 Gráficos Recharts */}
+        {resultado && (
           <DashboardComparativo
             resultado={resultado}
             valorAluguelMensal={valorAluguelMensal}
@@ -235,6 +225,7 @@ export const App: React.FC = () => {
             setTaxaValorizacaoAnual={setTaxaValorizacaoEstimada}
             taxaCDIAnual={taxaCDIAnual}
             setTaxaCDIAnual={setTaxaCDIAnual}
+            onSalvarSimulacaoHistorico={handleSalvarSimulacaoHistorico}
           />
         )}
       </main>

@@ -46,6 +46,14 @@ export interface ResultadoVenda {
   resultadoLiquido: number;
 }
 
+export interface PontoEvolucaoMensal {
+  mes: number;
+  saldoDevedor: number;
+  valorImovelProjetado: number;
+  patrimonioAcumulado: number;
+  fluxoCaixaMensal: number;
+}
+
 export interface ResultadoAluguel {
   valorAluguelMensal: number;
   custosMensaisExtras: number;
@@ -59,6 +67,7 @@ export interface ResultadoAluguel {
   valorImovelProjetado: number;
   acumuloFluxoCaixa: number;
   patrimonioFinalAlugando: number;
+  evolucaoMensal?: PontoEvolucaoMensal[];
 
   resultadoVendaAgora: ResultadoVenda;
   patrimonioFinalVendaInvestido: number;
