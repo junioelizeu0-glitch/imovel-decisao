@@ -9,9 +9,9 @@ export const Header: React.FC<HeaderProps> = ({ onNovaAnalise }) => {
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50 card-shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Título simples sem logo */}
-        <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-          Análise de Venda vs. Aluguel de Imóvel Financiado
+        {/* Título simplificado */}
+        <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+          Análise de Vendas
         </h1>
 
         {/* Botão de Ação: Nova Análise */}
