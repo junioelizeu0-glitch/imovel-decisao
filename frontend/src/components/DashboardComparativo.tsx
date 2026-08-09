@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   TrendingUp,
   DollarSign,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ResultadoAluguel } from "../types";
 import { DonutChartCard } from "./DonutChartCard";
+import { formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
 
 interface DashboardProps {
   resultado: ResultadoAluguel;
@@ -54,6 +55,14 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
     irAluguelMensal,
   } = resultado;
 
+  const [textoAluguel, setTextoAluguel] = useState("");
+  const [textoCustosExtras, setTextoCustosExtras] = useState("");
+
+  useEffect(() => {
+    setTextoAluguel(formatCurrencyBRL(valorAluguelMensal));
+    setTextoCustosExtras(formatCurrencyBRL(custosMensaisExtras));
+  }, [valorAluguelMensal, custosMensaisExtras]);
+
   return (
     <div className="space-y-8" id="simulador">
       {/* 1. Painel de Parâmetros de Simulação Rápida */}
@@ -74,9 +83,15 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs text-slate-400 font-bold">R$</span>
               <input
-                type="number"
-                value={valorAluguelMensal}
-                onChange={(e) => setValorAluguelMensal(Number(e.target.value))}
+                type="text"
+                placeholder="2.500,00"
+                value={textoAluguel}
+                onChange={(e) => setTextoAluguel(e.target.value)}
+                onBlur={() => {
+                  const num = parseCurrencyBRL(textoAluguel);
+                  setValorAluguelMensal(num);
+                  setTextoAluguel(formatCurrencyBRL(num));
+                }}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-teal-500/20"
               />
             </div>
@@ -89,9 +104,15 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs text-slate-400 font-bold">R$</span>
               <input
-                type="number"
-                value={custosMensaisExtras}
-                onChange={(e) => setCustosMensaisExtras(Number(e.target.value))}
+                type="text"
+                placeholder="300,00"
+                value={textoCustosExtras}
+                onChange={(e) => setTextoCustosExtras(e.target.value)}
+                onBlur={() => {
+                  const num = parseCurrencyBRL(textoCustosExtras);
+                  setCustosMensaisExtras(num);
+                  setTextoCustosExtras(formatCurrencyBRL(num));
+                }}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-medium text-slate-800"
               />
             </div>
@@ -105,7 +126,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
               <input
                 type="number"
                 step="0.1"
-                value={taxaValorizacaoAnual}
+                value={taxaValorizacaoAnual || ""}
                 onChange={(e) => setTaxaValorizacaoAnual(Number(e.target.value))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-sm font-bold text-teal-700"
               />
@@ -121,7 +142,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
               <input
                 type="number"
                 step="0.1"
-                value={taxaCDIAnual}
+                value={taxaCDIAnual || ""}
                 onChange={(e) => setTaxaCDIAnual(Number(e.target.value))}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 py-2 text-sm font-bold text-slate-800"
               />
@@ -192,13 +213,13 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
       {/* 3. Gráfico Donut da Composição do Aluguel */}
       <DonutChartCard
         valorAluguel={valorAluguelMensal}
-        valorParcela={resultadoVendaAgora.saldoDevedorAbatido > 0 ? resultado.valorAluguelMensal - fluxoCaixaMensalLiquido - custosMensaisExtras - irAluguelMensal : 0}
+        valorParcela={resultadoVendaAgora.saldoDevedorAbatido > 0 ? Math.max(0, resultado.valorAluguelMensal - fluxoCaixaMensalLiquido - custosMensaisExtras - irAluguelMensal) : 0}
         custosExtras={custosMensaisExtras}
         irAluguel={irAluguelMensal}
         fluxoLiquido={fluxoCaixaMensalLiquido}
       />
 
-      {/* 4. Quadro Comparativo Lado a Lado (2 Colunas Estilo Inspiração) */}
+      {/* 4. Quadro Comparativo Lado a Lado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* COLUNA 1: VENDER AGORA */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow card-shadow-hover space-y-6 flex flex-col justify-between">
@@ -272,7 +293,6 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          {/* Projeção de Investimento no CDI */}
           <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <TrendingUp className="w-4 h-4 text-teal-600" />
@@ -345,7 +365,6 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          {/* Valor Projetado e Patrimônio Final */}
           <div className="p-5 bg-teal-50/80 rounded-xl border border-teal-200 space-y-2">
             <span className="text-[11px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1">
               <Award className="w-4 h-4 text-teal-600" />

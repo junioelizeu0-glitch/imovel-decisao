@@ -10,6 +10,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { DadosImovel, DadosFinanciamento, EstimativaValorizacao } from "../types";
+import { formatCEP, formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
 
 interface FormularioProps {
   dadosImovel: DadosImovel;
@@ -41,7 +42,32 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
   const [resultadoBusca, setResultadoBusca] = useState<EstimativaValorizacao | null>(null);
   const [erroBusca, setErroBusca] = useState<string | null>(null);
 
-  // Recálculo automático do saldo devedor e parcela quando dados do financiamento mudam
+  // Estados locais para controle de texto formatado dos campos monetários
+  const [textoValorCompra, setTextoValorCompra] = useState("");
+  const [textoCustoExtra, setTextoCustoExtra] = useState("");
+  const [textoValorMercado, setTextoValorMercado] = useState("");
+  const [textoValorFinanciado, setTextoValorFinanciado] = useState("");
+  const [textoSaldoDevedor, setTextoSaldoDevedor] = useState("");
+  const [textoParcelaAtual, setTextoParcelaAtual] = useState("");
+
+  // Sincronizar estados formatados quando os props mudam externamente
+  useEffect(() => {
+    setTextoValorCompra(formatCurrencyBRL(dadosImovel.valorCompra));
+    setTextoCustoExtra(formatCurrencyBRL(dadosImovel.custoAquisicaoExtra));
+    setTextoValorMercado(formatCurrencyBRL(dadosImovel.valorMercadoAtual));
+  }, [dadosImovel.valorCompra, dadosImovel.custoAquisicaoExtra, dadosImovel.valorMercadoAtual]);
+
+  useEffect(() => {
+    setTextoValorFinanciado(formatCurrencyBRL(dadosFinanciamento.valorFinanciado));
+    setTextoSaldoDevedor(formatCurrencyBRL(dadosFinanciamento.saldoDevedorAtual));
+    setTextoParcelaAtual(formatCurrencyBRL(dadosFinanciamento.valorParcelaAtual));
+  }, [
+    dadosFinanciamento.valorFinanciado,
+    dadosFinanciamento.saldoDevedorAtual,
+    dadosFinanciamento.valorParcelaAtual,
+  ]);
+
+  // Recálculo automático do saldo devedor e parcela no backend
   useEffect(() => {
     if (dadosFinanciamento.valorFinanciado > 0) {
       recalcularFinanciamentoApi();
@@ -78,15 +104,16 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
         }));
       }
     } catch (e) {
-      console.warn("Recálculo offline ativado", e);
+      console.warn("Recálculo offline", e);
     }
   };
 
-  // Busca Automática de Endereço via CEP (ViaCEP API)
-  const handleCepChange = async (cepInput: string) => {
-    setDadosImovel((prev) => ({ ...prev, cep: cepInput }));
+  // Busca Automática de Endereço via CEP (ViaCEP API) com Máscara
+  const handleCepChange = async (val: string) => {
+    const cepFormatado = formatCEP(val);
+    setDadosImovel((prev) => ({ ...prev, cep: cepFormatado }));
 
-    const cepLimpo = cepInput.replace(/\D/g, "");
+    const cepLimpo = val.replace(/\D/g, "");
     if (cepLimpo.length === 8) {
       setBuscandoCep(true);
       setErroBusca(null);
@@ -107,7 +134,6 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               estado: novoEstado,
             }));
 
-            // Buscar valorização automaticamente com o endereço preenchido pelo CEP
             buscarValorizacaoAutomatica(novoEndereco, novaCidade, novoEstado);
           } else {
             setErroBusca("CEP não encontrado.");
@@ -121,11 +147,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
     }
   };
 
-  const buscarValorizacaoAutomatica = async (
-    end: string,
-    cid?: string,
-    uf?: string
-  ) => {
+  const buscarValorizacaoAutomatica = async (end: string, cid?: string, uf?: string) => {
     if (!end) return;
     setBuscandoValorizacao(true);
     try {
@@ -169,7 +191,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             Cadastro do Imóvel & Financiamento
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            Digite o CEP para buscar o endereço automaticamente ou preencha os dados abaixo.
+            Preencha os valores formatados em moeda (R$) e o CEP para busca automática.
           </p>
         </div>
 
@@ -197,7 +219,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
         </div>
       </div>
 
-      {/* Mensagem de confirmação de salvamento no banco */}
+      {/* Mensagem de salvamento */}
       {mensagemBanco && (
         <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 p-4 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
@@ -205,7 +227,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
         </div>
       )}
 
-      {/* Grid de 2 Colunas Lado a Lado */}
+      {/* Grid de 2 Colunas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* BLOCO 1: DADOS DO IMÓVEL */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow space-y-5">
@@ -219,10 +241,10 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </span>
           </div>
 
-          {/* Campo CEP com busca automática */}
+          {/* Campo CEP com Máscara XXXXX-XXX */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-teal-600" /> CEP (Busca Automática de Endereço)
+              <MapPin className="w-4 h-4 text-teal-600" /> CEP (Formato 00000-000)
             </label>
             <div className="relative">
               <input
@@ -230,7 +252,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 maxLength={9}
                 value={dadosImovel.cep}
                 onChange={(e) => handleCepChange(e.target.value)}
-                placeholder="Ex: 01310-100"
+                placeholder="00000-000"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 transition"
               />
               {buscandoCep && (
@@ -238,11 +260,11 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               )}
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              Ao digitar o CEP com 8 dígitos, o endereço, cidade e UF serão preenchidos automaticamente.
+              Ao digitar o CEP (ex: 33015-560), o endereço, cidade e UF são preenchidos automaticamente.
             </p>
           </div>
 
-          {/* Endereço Completo com botão de Valorização */}
+          {/* Endereço Completo */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               Endereço (Rua, Número, Bairro)
@@ -252,7 +274,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 type="text"
                 value={dadosImovel.endereco}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, endereco: e.target.value })}
-                placeholder="Ex: Av. Paulista, 1000"
+                placeholder="Ex: Rua Domingos Marcelino, Kennedy"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 transition"
               />
               <button
@@ -260,7 +282,6 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 onClick={handleBuscarValorizacao}
                 disabled={buscandoValorizacao}
                 className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap shadow-sm"
-                title="Estimativa por região"
               >
                 {buscandoValorizacao ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -273,7 +294,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             {erroBusca && <p className="text-xs text-rose-500 mt-1">{erroBusca}</p>}
           </div>
 
-          {/* Resultado da Busca de Valorização por Endereço */}
+          {/* Resultado da Busca de Valorização */}
           {resultadoBusca && (
             <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-3.5 space-y-2 text-xs">
               <div className="flex items-center justify-between text-teal-900 font-bold">
@@ -296,7 +317,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <input
                 type="text"
                 value={dadosImovel.cidade}
-                placeholder="Ex: São Paulo"
+                placeholder="Ex: Santa Luzia"
                 onChange={(e) => setDadosImovel({ ...dadosImovel, cidade: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm"
               />
@@ -306,7 +327,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <input
                 type="text"
                 maxLength={2}
-                placeholder="Ex: SP"
+                placeholder="Ex: MG"
                 value={dadosImovel.estado}
                 onChange={(e) => setDadosImovel({ ...dadosImovel, estado: e.target.value.toUpperCase() })}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm uppercase"
@@ -314,7 +335,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </div>
           </div>
 
-          {/* Valores de Compra e Ano */}
+          {/* Valor de Compra Formatado e Ano */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -323,10 +344,15 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-semibold">R$</span>
                 <input
-                  type="number"
-                  placeholder="0,00"
-                  value={dadosImovel.valorCompra || ""}
-                  onChange={(e) => setDadosImovel({ ...dadosImovel, valorCompra: Number(e.target.value) })}
+                  type="text"
+                  placeholder="350.000,00"
+                  value={textoValorCompra}
+                  onChange={(e) => setTextoValorCompra(e.target.value)}
+                  onBlur={() => {
+                    const num = parseCurrencyBRL(textoValorCompra);
+                    setDadosImovel((prev) => ({ ...prev, valorCompra: num }));
+                    setTextoValorCompra(formatCurrencyBRL(num));
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-semibold text-slate-900"
                 />
               </div>
@@ -344,6 +370,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </div>
           </div>
 
+          {/* Custos Extras e Valor de Mercado Formatados */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -352,16 +379,20 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-semibold">R$</span>
                 <input
-                  type="number"
-                  placeholder="0,00"
-                  value={dadosImovel.custoAquisicaoExtra || ""}
-                  onChange={(e) =>
-                    setDadosImovel({ ...dadosImovel, custoAquisicaoExtra: Number(e.target.value) })
-                  }
+                  type="text"
+                  placeholder="51.110,00"
+                  value={textoCustoExtra}
+                  onChange={(e) => setTextoCustoExtra(e.target.value)}
+                  onBlur={() => {
+                    const num = parseCurrencyBRL(textoCustoExtra);
+                    setDadosImovel((prev) => ({ ...prev, custoAquisicaoExtra: num }));
+                    setTextoCustoExtra(formatCurrencyBRL(num));
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm"
                 />
               </div>
             </div>
+
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">
                 Valor de Mercado Atual (R$)
@@ -369,12 +400,15 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-semibold">R$</span>
                 <input
-                  type="number"
-                  placeholder="0,00"
-                  value={dadosImovel.valorMercadoAtual || ""}
-                  onChange={(e) =>
-                    setDadosImovel({ ...dadosImovel, valorMercadoAtual: Number(e.target.value) })
-                  }
+                  type="text"
+                  placeholder="400.000,00"
+                  value={textoValorMercado}
+                  onChange={(e) => setTextoValorMercado(e.target.value)}
+                  onBlur={() => {
+                    const num = parseCurrencyBRL(textoValorMercado);
+                    setDadosImovel((prev) => ({ ...prev, valorMercadoAtual: num }));
+                    setTextoValorMercado(formatCurrencyBRL(num));
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-semibold text-teal-700"
                 />
               </div>
@@ -451,19 +485,22 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </div>
           </div>
 
-          {/* Valor Financiado e Taxa de Juros */}
+          {/* Valor Financiado Formatado e Taxa de Juros */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Valor Financiado Inicial</label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-semibold">R$</span>
                 <input
-                  type="number"
-                  placeholder="0,00"
-                  value={dadosFinanciamento.valorFinanciado || ""}
-                  onChange={(e) =>
-                    setDadosFinanciamento({ ...dadosFinanciamento, valorFinanciado: Number(e.target.value) })
-                  }
+                  type="text"
+                  placeholder="280.000,00"
+                  value={textoValorFinanciado}
+                  onChange={(e) => setTextoValorFinanciado(e.target.value)}
+                  onBlur={() => {
+                    const num = parseCurrencyBRL(textoValorFinanciado);
+                    setDadosFinanciamento((prev) => ({ ...prev, valorFinanciado: num }));
+                    setTextoValorFinanciado(formatCurrencyBRL(num));
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-semibold text-slate-900"
                 />
               </div>
@@ -474,7 +511,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
                 <input
                   type="number"
                   step="0.01"
-                  placeholder="0,00"
+                  placeholder="9,50"
                   value={dadosFinanciamento.taxaJurosAnual || ""}
                   onChange={(e) =>
                     setDadosFinanciamento({ ...dadosFinanciamento, taxaJurosAnual: Number(e.target.value) })
@@ -486,7 +523,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </div>
           </div>
 
-          {/* Parcelas Total e Parcelas Pagas */}
+          {/* Parcelas Total e Pagas */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Nº Parcelas Total</label>
@@ -517,7 +554,7 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </div>
           </div>
 
-          {/* Saldo Devedor Atual e Valor da Parcela Atual */}
+          {/* Saldo Devedor Atual e Valor da Parcela Formatados */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -529,16 +566,19 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-semibold">R$</span>
                 <input
-                  type="number"
-                  placeholder="0,00"
-                  value={dadosFinanciamento.saldoDevedorAtual || ""}
-                  onChange={(e) =>
-                    setDadosFinanciamento({
-                      ...dadosFinanciamento,
-                      saldoDevedorManual: Number(e.target.value),
-                      saldoDevedorAtual: Number(e.target.value),
-                    })
-                  }
+                  type="text"
+                  placeholder="240.000,00"
+                  value={textoSaldoDevedor}
+                  onChange={(e) => setTextoSaldoDevedor(e.target.value)}
+                  onBlur={() => {
+                    const num = parseCurrencyBRL(textoSaldoDevedor);
+                    setDadosFinanciamento((prev) => ({
+                      ...prev,
+                      saldoDevedorManual: num,
+                      saldoDevedorAtual: num,
+                    }));
+                    setTextoSaldoDevedor(formatCurrencyBRL(num));
+                  }}
                   className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-teal-500/20"
                 />
               </div>
@@ -551,15 +591,15 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-semibold">R$</span>
                 <input
-                  type="number"
-                  placeholder="0,00"
-                  value={dadosFinanciamento.valorParcelaAtual || ""}
-                  onChange={(e) =>
-                    setDadosFinanciamento({
-                      ...dadosFinanciamento,
-                      valorParcelaAtual: Number(e.target.value),
-                    })
-                  }
+                  type="text"
+                  placeholder="2.400,00"
+                  value={textoParcelaAtual}
+                  onChange={(e) => setTextoParcelaAtual(e.target.value)}
+                  onBlur={() => {
+                    const num = parseCurrencyBRL(textoParcelaAtual);
+                    setDadosFinanciamento((prev) => ({ ...prev, valorParcelaAtual: num }));
+                    setTextoParcelaAtual(formatCurrencyBRL(num));
+                  }}
                   className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-teal-700"
                 />
               </div>
