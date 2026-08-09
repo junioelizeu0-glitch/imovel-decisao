@@ -62,9 +62,10 @@ describe("Módulo de Regras Fiscais e IR de Ganho de Capital", () => {
       valorCompra: 200000,
       saldoDevedorAtual: 0,
       anoCompra: 1975,
+      percentualCorretagem: 0,
     });
 
-    // Ganho bruto = 800.000. Ganho tributavel com 70% de redução = 800.000 * 0.3 = 240.000
+    // Ganho bruto sem corretagem = 800.000. Ganho tributavel com 70% de redução = 800.000 * 0.3 = 240.000
     expect(resultado.ganhoDeCapitalTributavel).toBeCloseTo(240000);
     expect(resultado.impostoRendaCalculado).toBeCloseTo(36000); // 15% de 240.000
   });

@@ -1,6 +1,7 @@
 export interface ParametrosVenda {
   valorVenda: number;
-  valorCompraOriginal: number;
+  valorCompraOriginal?: number;
+  valorCompra?: number;
   custoAquisicaoExtra?: number;
   anoCompra: number;
   anoVenda?: number;
@@ -27,6 +28,8 @@ export interface ResultadoVenda {
   anoCompra: number;
   isUnicoImovelAte440k: boolean;
   reinvestimento180Dias: boolean;
+  taxasExtras?: any[];
+  totalTaxasExtras?: number;
 }
 
 export function obterFatorReducaoLei11196(anoCompra: number, anoVenda: number = new Date().getFullYear()): number {
@@ -40,6 +43,8 @@ export function obterFatorReducaoLei11196(anoCompra: number, anoVenda: number = 
   return tabelaReducao[anoCompra] || 0.0;
 }
 
+export const getFatorReducaoAnoCompra = obterFatorReducaoLei11196;
+
 export function calcularTabelaProgressivaGanhoCapital(ganhoTributavel: number): number {
   if (ganhoTributavel <= 0) return 0;
   const LIMITE_FAIXA_1 = 5_000_000;
@@ -52,10 +57,13 @@ export function calcularTabelaProgressivaGanhoCapital(ganhoTributavel: number): 
   return 5_000_000 * 0.15 + 5_000_000 * 0.175 + 20_000_000 * 0.2 + (ganhoTributavel - 30_000_000) * 0.225;
 }
 
+export const calcularIRProgressivo = calcularTabelaProgressivaGanhoCapital;
+
 export function calcularCenarioVenda(params: ParametrosVenda): ResultadoVenda {
   const {
     valorVenda,
     valorCompraOriginal,
+    valorCompra,
     custoAquisicaoExtra = 0,
     anoCompra,
     anoVenda = new Date().getFullYear(),
@@ -65,7 +73,8 @@ export function calcularCenarioVenda(params: ParametrosVenda): ResultadoVenda {
     reinvestimento180Dias = false,
   } = params;
 
-  const custoTotalAquisicao = valorCompraOriginal + custoAquisicaoExtra;
+  const compraEfetiva = valorCompraOriginal ?? valorCompra ?? 0;
+  const custoTotalAquisicao = compraEfetiva + custoAquisicaoExtra;
   const valorCorretagem = valorVenda * (percentualCorretagem / 100);
   const ganhoDeCapitalBruto = Math.max(0, valorVenda - custoTotalAquisicao - valorCorretagem);
 
@@ -106,7 +115,7 @@ export function calcularCenarioVenda(params: ParametrosVenda): ResultadoVenda {
     valorCorretagem: Number(valorCorretagem.toFixed(2)),
     saldoDevedorAbatido: Number(saldoDevedorAbatido.toFixed(2)),
     resultadoLiquido: Number(resultadoLiquido.toFixed(2)),
-    valorCompraOriginal,
+    valorCompraOriginal: compraEfetiva,
     custoAquisicaoExtra,
     anoCompra,
     isUnicoImovelAte440k,
