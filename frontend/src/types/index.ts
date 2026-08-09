@@ -1,3 +1,10 @@
+export interface TaxaExtra {
+  id: string;
+  descricao: string;
+  tipo: "FIXO" | "PERCENTUAL";
+  valor: number;
+}
+
 export interface DadosImovel {
   endereco: string;
   cidade: string;
@@ -44,6 +51,13 @@ export interface ResultadoVenda {
   valorCorretagem: number;
   saldoDevedorAbatido: number;
   resultadoLiquido: number;
+  valorCompraOriginal?: number;
+  custoAquisicaoExtra?: number;
+  anoCompra?: number;
+  isUnicoImovelAte440k?: boolean;
+  reinvestimento180Dias?: boolean;
+  taxasExtras?: TaxaExtra[];
+  totalTaxasExtras?: number;
 }
 
 export interface PontoEvolucaoMensal {

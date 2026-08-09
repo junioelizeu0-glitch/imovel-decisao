@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TrendingUp,
   DollarSign,
@@ -11,10 +11,12 @@ import {
   CheckCircle2,
   RefreshCw,
 } from "lucide-react";
-import { ResultadoAluguel } from "../types";
+import { ResultadoAluguel, ResultadoVenda, TaxaExtra } from "../types";
 import { DonutChartCard } from "./DonutChartCard";
 import { GraficosComparativos } from "./GraficosComparativos";
+import { ListaDeducoesExtras } from "./ListaDeducoesExtras";
 import { formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
+import { calcularCenarioVenda } from "../services/regras-fiscais";
 
 interface DashboardProps {
   resultado: ResultadoAluguel;
@@ -42,12 +44,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
   onSalvarSimulacaoHistorico,
 }) => {
   const {
-    opcaoRecomendada,
-    resumoComparativo,
-    diferencaPatrimonial,
     patrimonioFinalAlugando,
-    patrimonioFinalVendaInvestido,
-    resultadoVendaAgora,
     mesesAteQuitar,
     anosAteQuitar,
     valorImovelProjetado,
@@ -55,6 +52,81 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
     alertaRisco,
     irAluguelMensal,
   } = resultado;
+
+  // Estado local editável para o Valor de Venda Simulado
+  const [valorVendaSimulado, setValorVendaSimulado] = useState<number>(
+    resultado.resultadoVendaAgora.valorVenda
+  );
+  const [textoValorVenda, setTextoValorVenda] = useState<string>(
+    formatCurrencyBRL(resultado.resultadoVendaAgora.valorVenda)
+  );
+
+  // Estado local para a lista dinâmica de Taxas e Impostos Extras
+  const [taxasExtras, setTaxasExtras] = useState<TaxaExtra[]>(
+    resultado.resultadoVendaAgora.taxasExtras || []
+  );
+
+  // Sincronizar caso os dados de entrada mudem externamente
+  useEffect(() => {
+    setValorVendaSimulado(resultado.resultadoVendaAgora.valorVenda);
+    setTextoValorVenda(formatCurrencyBRL(resultado.resultadoVendaAgora.valorVenda));
+    if (resultado.resultadoVendaAgora.taxasExtras) {
+      setTaxasExtras(resultado.resultadoVendaAgora.taxasExtras);
+    }
+  }, [resultado.resultadoVendaAgora.valorVenda, resultado.resultadoVendaAgora.taxasExtras]);
+
+  // Adicionar e Remover Taxas Extras Dinâmicas
+  const handleAdicionarTaxa = (novaTaxa: TaxaExtra) => {
+    setTaxasExtras((prev) => [...prev, novaTaxa]);
+  };
+
+  const handleRemoverTaxa = (id: string) => {
+    setTaxasExtras((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Cálculo da Soma Total das Taxas Extras
+  const totalTaxasExtras = taxasExtras.reduce((acc, t) => {
+    if (t.tipo === "PERCENTUAL") {
+      return acc + (t.valor / 100) * valorVendaSimulado;
+    }
+    return acc + t.valor;
+  }, 0);
+
+  // Recálculo do cenário de venda padrão
+  const resultadoVendaBase = calcularCenarioVenda({
+    valorVenda: valorVendaSimulado > 0 ? valorVendaSimulado : resultado.resultadoVendaAgora.valorVenda,
+    valorCompraOriginal: resultado.resultadoVendaAgora.valorCompraOriginal || 350000,
+    custoAquisicaoExtra: resultado.resultadoVendaAgora.custoAquisicaoExtra || 51110,
+    anoCompra: resultado.resultadoVendaAgora.anoCompra || 2026,
+    saldoDevedorAtual: resultado.resultadoVendaAgora.saldoDevedorAbatido,
+    percentualCorretagem: 6,
+    isUnicoImovelAte440k: resultado.resultadoVendaAgora.isUnicoImovelAte440k,
+    reinvestimento180Dias: resultado.resultadoVendaAgora.reinvestimento180Dias,
+  });
+
+  // Resultado Líquido Final abatendo todas as taxas extras em tempo real
+  const resultadoLiquidoFinalDinamico = Math.max(
+    0,
+    resultadoVendaBase.resultadoLiquido - totalTaxasExtras
+  );
+
+  const resultadoVendaDinamico: ResultadoVenda = {
+    ...resultadoVendaBase,
+    resultadoLiquido: resultadoLiquidoFinalDinamico,
+    taxasExtras,
+    totalTaxasExtras,
+  };
+
+  // Recálculo do patrimônio investido no CDI a partir do resultado líquido ajustado
+  const fatorInvestimentoCDI = Math.pow(1 + taxaCDIAnual / 100, anosAteQuitar);
+  const patrimonioFinalVendaInvestidoDinamico = Math.max(
+    0,
+    resultadoLiquidoFinalDinamico * fatorInvestimentoCDI
+  );
+
+  const diferencaPatrimonialDinamica = patrimonioFinalAlugando - patrimonioFinalVendaInvestidoDinamico;
+  const opcaoRecomendadaDinamica: "VENDER" | "ALUGAR" =
+    diferencaPatrimonialDinamica >= 0 ? "ALUGAR" : "VENDER";
 
   const [salvandoHistorico, setSalvandoHistorico] = useState(false);
   const [mensagemHistorico, setMensagemHistorico] = useState<string | null>(null);
@@ -68,12 +140,21 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
     setMensagemHistorico(null);
     try {
       await onSalvarSimulacaoHistorico();
-      setMensagemHistorico("✅ Simulação salva no histórico de banco de dados com sucesso!");
+      setMensagemHistorico("✅ Simulação salva no histórico com sucesso!");
     } catch (e) {
       setMensagemHistorico("❌ Erro ao salvar histórico de simulação.");
     } finally {
       setSalvandoHistorico(false);
     }
+  };
+
+  // Objeto compilado dinamicamente para alimentar os 4 gráficos em tempo real
+  const resultadoDinamicoParaGraficos: ResultadoAluguel = {
+    ...resultado,
+    resultadoVendaAgora: resultadoVendaDinamico,
+    patrimonioFinalVendaInvestido: patrimonioFinalVendaInvestidoDinamico,
+    diferencaPatrimonial: diferencaPatrimonialDinamica,
+    opcaoRecomendada: opcaoRecomendadaDinamica,
   };
 
   return (
@@ -100,7 +181,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
               ) : (
                 <Save className="w-4 h-4 text-amber-400" />
               )}
-              Salvar Simulação no Histórico
+              Salvar Simulação
             </button>
           )}
         </div>
@@ -189,10 +270,10 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* 2. Banner de Resultado Principal */}
+      {/* 2. Banner de Resultado Principal Atualizado em Tempo Real */}
       <div
         className={`rounded-2xl p-6 sm:p-8 card-shadow border-2 transition-all ${
-          opcaoRecomendada === "ALUGAR"
+          opcaoRecomendadaDinamica === "ALUGAR"
             ? "bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 border-teal-500 text-white"
             : "bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 border-amber-400 text-white"
         }`}
@@ -202,25 +283,29 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                  opcaoRecomendada === "ALUGAR"
+                  opcaoRecomendadaDinamica === "ALUGAR"
                     ? "bg-teal-400/20 text-teal-300 border border-teal-400/30"
                     : "bg-amber-400/20 text-amber-300 border border-amber-400/30"
                 }`}
               >
                 <Award className="w-4 h-4" />
-                Vencedor Financeiro: {opcaoRecomendada === "ALUGAR" ? "ALUGAR E AMORTIZAR" : "VENDER AGORA E INVESTIR"}
+                Vencedor Financeiro: {opcaoRecomendadaDinamica === "ALUGAR" ? "ALUGAR E AMORTIZAR" : "VENDER AGORA E INVESTIR"}
               </span>
-              <span className="text-xs text-slate-300 font-medium">Horizonte: {mesesAteQuitar} meses ({anosAteQuitar} anos)</span>
+              <span className="text-xs text-slate-300 font-medium">
+                Horizonte: {mesesAteQuitar} meses ({anosAteQuitar} anos)
+              </span>
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              {opcaoRecomendada === "ALUGAR"
-                ? `Alugar gera +R$ ${Math.abs(diferencaPatrimonial).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de patrimônio`
-                : `Vender gera +R$ ${Math.abs(diferencaPatrimonial).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de patrimônio`}
+              {opcaoRecomendadaDinamica === "ALUGAR"
+                ? `Alugar gera +R$ ${Math.abs(diferencaPatrimonialDinamica).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de patrimônio`
+                : `Vender gera +R$ ${Math.abs(diferencaPatrimonialDinamica).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de patrimônio`}
             </h2>
 
             <p className="text-sm text-slate-200 leading-relaxed font-normal">
-              {resumoComparativo}
+              {opcaoRecomendadaDinamica === "ALUGAR"
+                ? `Alugar compensa mais! Em ${mesesAteQuitar} meses (${anosAteQuitar} anos), seu patrimônio projetado alugando (R$ ${patrimonioFinalAlugando.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}) será R$ ${Math.abs(diferencaPatrimonialDinamica).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} superior ao cenário de venda simulada com investimento a ${taxaCDIAnual}% a.a.`
+                : `Vender agora compensa mais! Investindo o saldo líquido de R$ ${resultadoVendaDinamico.resultadoLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} a ${taxaCDIAnual}% a.a., seu patrimônio em ${mesesAteQuitar} meses será R$ ${Math.abs(diferencaPatrimonialDinamica).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} superior ao cenário de aluguel.`}
             </p>
           </div>
 
@@ -229,7 +314,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
               Vantagem Patrimonial
             </span>
             <span className="text-2xl font-black text-amber-300 mt-1">
-              +R$ {Math.abs(diferencaPatrimonial).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+              +R$ {Math.abs(diferencaPatrimonialDinamica).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
             </span>
             <span className="text-[10px] text-slate-300 mt-1">em {anosAteQuitar} anos</span>
           </div>
@@ -247,13 +332,13 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* 3. OS 4 GRÁFICOS EM DESTAQUE (RECHARTS) */}
-      <GraficosComparativos resultado={resultado} taxaCDIAnual={taxaCDIAnual} />
+      {/* 3. OS 4 GRÁFICOS EM DESTAQUE (RECHARTS) - ATUALIZADOS EM TEMPO REAL */}
+      <GraficosComparativos resultado={resultadoDinamicoParaGraficos} taxaCDIAnual={taxaCDIAnual} />
 
       {/* 4. Gráfico Donut da Composição do Aluguel */}
       <DonutChartCard
         valorAluguel={valorAluguelMensal}
-        valorParcela={resultadoVendaAgora.saldoDevedorAbatido > 0 ? Math.max(0, resultado.valorAluguelMensal - fluxoCaixaMensalLiquido - custosMensaisExtras - irAluguelMensal) : 0}
+        valorParcela={resultadoVendaDinamico.saldoDevedorAbatido > 0 ? Math.max(0, resultado.valorAluguelMensal - fluxoCaixaMensalLiquido - custosMensaisExtras - irAluguelMensal) : 0}
         custosExtras={custosMensaisExtras}
         irAluguel={irAluguelMensal}
         fluxoLiquido={fluxoCaixaMensalLiquido}
@@ -261,7 +346,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
 
       {/* 5. Quadro Comparativo Lado a Lado em 2 Colunas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* COLUNA 1: VENDER AGORA */}
+        {/* COLUNA 1: OPÇÃO A - VENDER AGORA COM INPUT EDITÁVEL E LISTA DE TAXAS EXTRAS */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow card-shadow-hover space-y-6 flex flex-col justify-between">
           <div className="space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -276,56 +361,91 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
               </span>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between py-2 border-b border-slate-50">
-                <span className="text-slate-600">Valor de Venda Estimado</span>
-                <span className="font-bold text-slate-900">
-                  R$ {resultadoVendaAgora.valorVenda.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </span>
+            <div className="space-y-4 text-xs">
+              {/* CAMPO EDITÁVEL: Valor de Venda Simulado */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Valor de Venda Simulado (R$)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-bold">R$</span>
+                  <input
+                    type="text"
+                    value={textoValorVenda}
+                    onChange={(e) => {
+                      setTextoValorVenda(e.target.value);
+                      const num = parseCurrencyBRL(e.target.value);
+                      setValorVendaSimulado(num);
+                    }}
+                    onBlur={() => {
+                      const num = parseCurrencyBRL(textoValorVenda);
+                      setValorVendaSimulado(num);
+                      setTextoValorVenda(formatCurrencyBRL(num));
+                    }}
+                    placeholder="400.000,00"
+                    className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-base font-extrabold text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Altere este valor para recalcular instantaneamente as deduções, o IR e o líquido final.
+                </p>
               </div>
 
-              <div className="flex justify-between py-2 border-b border-slate-50 text-rose-600">
+              {/* Quitação do Saldo Devedor */}
+              <div className="flex justify-between py-2 border-b border-slate-100 text-rose-600">
                 <span>(-) Quitação do Saldo Devedor</span>
                 <span className="font-semibold">
-                  -R$ {resultadoVendaAgora.saldoDevedorAbatido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  -R$ {resultadoVendaDinamico.saldoDevedorAbatido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
-              <div className="flex justify-between py-2 border-b border-slate-50 text-rose-600">
+              {/* Corretagem Imobiliária (6%) */}
+              <div className="flex justify-between py-2 border-b border-slate-100 text-rose-600">
                 <span>(-) Corretagem Imobiliária (6%)</span>
                 <span className="font-semibold">
-                  -R$ {resultadoVendaAgora.valorCorretagem.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  -R$ {resultadoVendaDinamico.valorCorretagem.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
-              <div className="flex justify-between py-2 border-b border-slate-50 text-rose-600">
-                <span className="flex items-center gap-1">
+              {/* Imposto de Renda sobre Ganho de Capital com Badge ISENTO */}
+              <div className="flex justify-between py-2 border-b border-slate-100 text-rose-600 items-center">
+                <span className="flex items-center gap-1.5">
                   (-) Imposto de Renda (Ganho de Capital)
-                  {resultadoVendaAgora.isentoIR && (
+                  {resultadoVendaDinamico.isentoIR && (
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
                       ISENTO
                     </span>
                   )}
                 </span>
                 <span className="font-semibold">
-                  -R$ {resultadoVendaAgora.impostoRendaCalculado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  -R$ {resultadoVendaDinamico.impostoRendaCalculado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
-              {resultadoVendaAgora.isentoIR && (
+              {/* Motivo de Isenção ou Alerta */}
+              {resultadoVendaDinamico.isentoIR && (
                 <div className="p-2.5 bg-emerald-50 text-emerald-800 text-[11px] rounded-xl border border-emerald-100 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>{resultadoVendaAgora.motivoIsencao}</span>
+                  <span>{resultadoVendaDinamico.motivoIsencao}</span>
                 </div>
               )}
 
+              {/* COMPONENTE REUTILIZÁVEL: Lista de Deduções e Taxas Extras Dinâmicas */}
+              <ListaDeducoesExtras
+                taxasExtras={taxasExtras}
+                onAdicionarTaxa={handleAdicionarTaxa}
+                onRemoverTaxa={handleRemoverTaxa}
+                valorVendaBase={valorVendaSimulado}
+              />
+
+              {/* Valor Líquido no Bolso Agora */}
               <div className="p-4 bg-slate-900 text-white rounded-xl flex items-center justify-between mt-2">
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-semibold">
-                    Valor Líquido no Bolso Agora
+                    VALOR LÍQUIDO NO BOLSO AGORA
                   </span>
                   <span className="text-xl font-extrabold text-teal-400">
-                    R$ {resultadoVendaAgora.resultadoLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    R$ {resultadoVendaDinamico.resultadoLiquido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <DollarSign className="w-8 h-8 text-teal-400/40" />
@@ -339,10 +459,10 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
               Patrimônio Investido a {taxaCDIAnual}% a.a. em {anosAteQuitar} anos
             </span>
             <div className="text-2xl font-black text-slate-900">
-              R$ {patrimonioFinalVendaInvestido.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              R$ {patrimonioFinalVendaInvestidoDinamico.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </div>
             <p className="text-[11px] text-slate-500">
-              Caso você venda o imóvel hoje e aplique o saldo líquido a 100% do CDI no mesmo horizonte de tempo.
+              Caso você venda o imóvel por R$ {resultadoVendaDinamico.valorVenda.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} e aplique o saldo líquido a {taxaCDIAnual}% do CDI no mesmo prazo.
             </p>
           </div>
         </div>

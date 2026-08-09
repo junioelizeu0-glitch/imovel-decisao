@@ -22,6 +22,11 @@ export interface ResultadoVenda {
   valorCorretagem: number;
   saldoDevedorAbatido: number;
   resultadoLiquido: number;
+  valorCompraOriginal: number;
+  custoAquisicaoExtra: number;
+  anoCompra: number;
+  isUnicoImovelAte440k: boolean;
+  reinvestimento180Dias: boolean;
 }
 
 export function obterFatorReducaoLei11196(anoCompra: number, anoVenda: number = new Date().getFullYear()): number {
@@ -101,5 +106,10 @@ export function calcularCenarioVenda(params: ParametrosVenda): ResultadoVenda {
     valorCorretagem: Number(valorCorretagem.toFixed(2)),
     saldoDevedorAbatido: Number(saldoDevedorAbatido.toFixed(2)),
     resultadoLiquido: Number(resultadoLiquido.toFixed(2)),
+    valorCompraOriginal,
+    custoAquisicaoExtra,
+    anoCompra,
+    isUnicoImovelAte440k,
+    reinvestimento180Dias,
   };
 }
