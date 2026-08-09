@@ -3,6 +3,7 @@ import { Header } from "./components/Header";
 import { FormularioImovelFinanciamento } from "./components/FormularioImovelFinanciamento";
 import { DashboardComparativo } from "./components/DashboardComparativo";
 import { DadosImovel, DadosFinanciamento, ResultadoAluguel } from "./types";
+import { calcularCenarioAluguel } from "./services/calculo-aluguel";
 
 export const App: React.FC = () => {
   // Estado de entrada
@@ -42,12 +43,27 @@ export const App: React.FC = () => {
   // Estados de notificação
   const [salvandoBanco, setSalvandoBanco] = useState(false);
   const [mensagemBanco, setMensagemBanco] = useState<string | null>(null);
-  const [imovelSalvoId, setImovelSalvoId] = useState<string | null>(null);
 
   // Executa a simulação ao carregar a página para que os 4 GRÁFICOS APAREÇAM IMEDIATAMENTE
   useEffect(() => {
     executarSimulacao();
-  }, []);
+  }, [
+    dadosImovel.valorCompra,
+    dadosImovel.valorMercadoAtual,
+    dadosImovel.custoAquisicaoExtra,
+    dadosImovel.anoCompra,
+    dadosFinanciamento.valorFinanciado,
+    dadosFinanciamento.saldoDevedorAtual,
+    dadosFinanciamento.taxaJurosAnual,
+    dadosFinanciamento.sistemaAmortizacao,
+    dadosFinanciamento.numeroParcelasTotal,
+    dadosFinanciamento.parcelasPagas,
+    dadosFinanciamento.valorParcelaAtual,
+    valorAluguelMensal,
+    custosMensaisExtras,
+    taxaValorizacaoEstimada,
+    taxaCDIAnual,
+  ]);
 
   // Função para limpar todos os campos e iniciar nova análise
   const handleNovaAnalise = () => {
@@ -78,152 +94,92 @@ export const App: React.FC = () => {
     setCustosMensaisExtras(0);
     setResultado(null);
     setMensagemBanco(null);
-    setImovelSalvoId(null);
   };
 
-  // BOTÃO 1: "Salvar no Banco de Dados" (APENAS DADOS DE ENTRADA IMÓVEL + FINANCIAMENTO)
+  // BOTÃO 1: "Salvar Simulação" (SALVA A SIMULAÇÃO ATUAL)
   const handleSalvarNoBanco = async () => {
-    if (!dadosImovel.cep) {
-      setMensagemBanco("⚠️ Por favor, informe pelo menos o CEP para salvar o imóvel no banco.");
-      return;
-    }
-
     setSalvandoBanco(true);
     setMensagemBanco(null);
 
-    const payloadImovel = {
-      endereco: dadosImovel.endereco || "Endereço em cadastro",
-      cidade: dadosImovel.cidade || "Cidade não informada",
-      estado: dadosImovel.estado || "UF",
-      cep: dadosImovel.cep,
-      valor_compra: dadosImovel.valorCompra || 0,
-      data_compra: dadosImovel.dataCompra,
-      custo_aquisicao_extra: dadosImovel.custoAquisicaoExtra || 0,
-      valor_mercado_atual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra || 0,
-      banco: dadosFinanciamento.banco || "Caixa Econômica Federal",
-      valor_financiado: dadosFinanciamento.valorFinanciado || 0,
-      taxa_juros_anual: dadosFinanciamento.taxaJurosAnual || 0,
-      sistema_amortizacao: dadosFinanciamento.sistemaAmortizacao || "SAC",
-      numero_parcelas_total: dadosFinanciamento.numeroParcelasTotal || 360,
-      parcelas_pagas: dadosFinanciamento.parcelasPagas || 0,
-      saldo_devedor_manual: dadosFinanciamento.saldoDevedorAtual || 0,
+    const payloadSimulacao = {
+      id: "sim_" + Date.now(),
+      dataCriacao: new Date().toISOString(),
+      dadosImovel,
+      dadosFinanciamento,
+      valorAluguelMensal,
+      custosMensaisExtras,
+      taxaValorizacaoEstimada,
+      taxaCDIAnual,
+      resultado,
     };
 
+    // Tentar persistir no backend se disponível
     try {
-      const resImovel = await fetch("/api/imoveis", {
+      await fetch("/api/simulacoes/aluguel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadImovel),
-      });
-
-      if (resImovel.ok) {
-        const imovelCriado = await resImovel.json();
-        setImovelSalvoId(imovelCriado.id);
-        setMensagemBanco(
-          `✅ Sucesso! Dados cadastrais do Imóvel & Financiamento gravados no banco de dados.`
-        );
-      } else {
-        const errData = await resImovel.json().catch(() => ({}));
-        setMensagemBanco(
-          `❌ ${errData.error || errData.detalhe || "Erro ao salvar no banco. Verifique os campos."}`
-        );
-      }
+        body: JSON.stringify(payloadSimulacao),
+      }).catch(() => null);
     } catch (e) {
-      // Fallback para persistência local (LocalStorage)
-      try {
-        const historicoLocal = JSON.parse(localStorage.getItem("imoveis_salvos") || "[]");
-        const novoIdLocal = "local_" + Date.now();
-        historicoLocal.push({ id: novoIdLocal, ...payloadImovel, data_criacao: new Date().toISOString() });
-        localStorage.setItem("imoveis_salvos", JSON.stringify(historicoLocal));
-        setImovelSalvoId(novoIdLocal);
-        setMensagemBanco("✅ Sucesso! Imóvel & Financiamento salvos no banco local com sucesso.");
-      } catch (errLocal) {
-        setMensagemBanco("❌ Falha de conexão ao salvar no banco de dados.");
-      }
+      // Silenciar erro backend
+    }
+
+    // Persistência garantida no navegador (LocalStorage)
+    try {
+      const historico = JSON.parse(localStorage.getItem("simulacoes_imovel_decisao") || "[]");
+      historico.unshift(payloadSimulacao);
+      localStorage.setItem("simulacoes_imovel_decisao", JSON.stringify(historico));
+
+      setMensagemBanco("✅ Simulação salva com sucesso no histórico!");
+    } catch (errLocal) {
+      setMensagemBanco("❌ Não foi possível salvar a simulação.");
     } finally {
       setSalvandoBanco(false);
     }
   };
 
-  // BOTÃO 2: "Gerar Comparativo" (RODA CÁLCULOS FISCAIS/FINANCEIROS E RENDERIZA OS 4 GRÁFICOS)
-  const executarSimulacao = async () => {
-    try {
-      const payload = {
-        valorMercadoAtual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra || 400000,
-        saldoDevedorAtual: dadosFinanciamento.saldoDevedorAtual || 240000,
-        taxaJurosFinanciamentoAnual: dadosFinanciamento.taxaJurosAnual || 9.5,
-        sistemaAmortizacao: dadosFinanciamento.sistemaAmortizacao,
-        parcelasRestantes: Math.max(
-          1,
-          (dadosFinanciamento.numeroParcelasTotal || 360) - (dadosFinanciamento.parcelasPagas || 24)
-        ),
-        valorParcelaAtual: dadosFinanciamento.valorParcelaAtual || 2400,
-        valorAluguelMensal: valorAluguelMensal || 2800,
-        custosMensaisExtras,
-        taxaValorizacaoAnualEstimada: taxaValorizacaoEstimada,
-        taxaCDIAnualRef: taxaCDIAnual,
-        valorCompra: dadosImovel.valorCompra || 350000,
+  // BOTÃO 2: "Gerar Comparativo" (RODA CÁLCULOS FISCAIS/FINANCEIROS E RENDERIZA OS 4 GRÁFICOS INSTANTANEAMENTE)
+  const executarSimulacao = () => {
+    const valorMercado = dadosImovel.valorMercadoAtual || dadosImovel.valorCompra || 400000;
+    const saldoDevedor = dadosFinanciamento.saldoDevedorAtual || 240000;
+    const taxaJuros = dadosFinanciamento.taxaJurosAnual || 9.5;
+    const parcelasTotal = dadosFinanciamento.numeroParcelasTotal || 360;
+    const parcelasPagas = dadosFinanciamento.parcelasPagas || 24;
+    const parcelasRestantes = Math.max(1, parcelasTotal - parcelasPagas);
+    const valorParcela = dadosFinanciamento.valorParcelaAtual || 2400;
+
+    const resultadoCalculado = calcularCenarioAluguel({
+      valorMercadoAtual: valorMercado,
+      saldoDevedorAtual: saldoDevedor,
+      taxaJurosFinanciamentoAnual: taxaJuros,
+      sistemaAmortizacao: dadosFinanciamento.sistemaAmortizacao,
+      parcelasRestantes,
+      valorParcelaAtual: valorParcela,
+      valorAluguelMensal: valorAluguelMensal || 2800,
+      custosMensaisExtras,
+      taxaValorizacaoAnualEstimada: taxaValorizacaoEstimada,
+      taxaCDIAnualRef: taxaCDIAnual,
+      parametrosVenda: {
+        valorVenda: valorMercado,
+        valorCompraOriginal: dadosImovel.valorCompra || 350000,
         custoAquisicaoExtra: dadosImovel.custoAquisicaoExtra || 51110,
         anoCompra: dadosImovel.anoCompra || 2026,
+        saldoDevedorAtual: saldoDevedor,
         percentualCorretagem: 6,
         isUnicoImovelAte440k: dadosImovel.isUnicoImovelAte440k,
         reinvestimento180Dias: dadosImovel.reinvestimento180Dias,
-      };
+      },
+    });
 
-      const response = await fetch("/api/simulacoes/aluguel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        const data: ResultadoAluguel = await response.json();
-        setResultado(data);
-
-        // Rolar suavemente até o dashboard de gráficos
-        setTimeout(() => {
-          const el = document.getElementById("simulador");
-          if (el) el.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      }
-    } catch (e) {
-      console.warn("Simulação cliente offline", e);
-    }
+    setResultado(resultadoCalculado);
   };
 
-  // AÇÃO OPCIONAL DENTRO DO DASHBOARD: "Salvar Simulação no Histórico do Banco"
-  const handleSalvarSimulacaoHistorico = async () => {
-    if (!resultado) return;
-
-    try {
-      await fetch("/api/simulacoes/aluguel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imovelId: imovelSalvoId || undefined,
-          valorMercadoAtual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
-          saldoDevedorAtual: dadosFinanciamento.saldoDevedorAtual,
-          taxaJurosFinanciamentoAnual: dadosFinanciamento.taxaJurosAnual,
-          sistemaAmortizacao: dadosFinanciamento.sistemaAmortizacao,
-          parcelasRestantes: Math.max(
-            1,
-            dadosFinanciamento.numeroParcelasTotal - dadosFinanciamento.parcelasPagas
-          ),
-          valorParcelaAtual: dadosFinanciamento.valorParcelaAtual,
-          valorAluguelMensal,
-          custosMensaisExtras,
-          taxaValorizacaoAnualEstimada: taxaValorizacaoEstimada,
-          taxaCDIAnualRef: taxaCDIAnual,
-          valorCompra: dadosImovel.valorCompra,
-          custoAquisicaoExtra: dadosImovel.custoAquisicaoExtra,
-          anoCompra: dadosImovel.anoCompra,
-        }),
-      });
-    } catch (e) {
-      const histSimulacoes = JSON.parse(localStorage.getItem("simulacoes_salvas") || "[]");
-      histSimulacoes.push({ imovelId: imovelSalvoId, resultado, data: new Date().toISOString() });
-      localStorage.setItem("simulacoes_salvas", JSON.stringify(histSimulacoes));
-    }
+  const handleGerarComparativoComScroll = () => {
+    executarSimulacao();
+    setTimeout(() => {
+      const el = document.getElementById("simulador");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
   return (
@@ -231,13 +187,13 @@ export const App: React.FC = () => {
       <Header onNovaAnalise={handleNovaAnalise} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Formulário de Entrada com CEP Automático */}
+        {/* Formulário de Entrada com CEP Automático e Botão "Salvar Simulação" */}
         <FormularioImovelFinanciamento
           dadosImovel={dadosImovel}
           setDadosImovel={setDadosImovel}
           dadosFinanciamento={dadosFinanciamento}
           setDadosFinanciamento={setDadosFinanciamento}
-          onSimular={executarSimulacao}
+          onSimular={handleGerarComparativoComScroll}
           onSalvarNoBanco={handleSalvarNoBanco}
           taxaValorizacaoEstimada={taxaValorizacaoEstimada}
           setTaxaValorizacaoEstimada={setTaxaValorizacaoEstimada}
@@ -257,7 +213,7 @@ export const App: React.FC = () => {
             setTaxaValorizacaoAnual={setTaxaValorizacaoEstimada}
             taxaCDIAnual={taxaCDIAnual}
             setTaxaCDIAnual={setTaxaCDIAnual}
-            onSalvarSimulacaoHistorico={handleSalvarSimulacaoHistorico}
+            onSalvarSimulacaoHistorico={handleSalvarNoBanco}
           />
         )}
       </main>
