@@ -125,7 +125,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // BOTÃO 2: "Gerar Comparativo" (RODA CÁLCULOS FISCAIS/FINANCEIROS E RENDERIZA GRÁFICOS)
+  // BOTÃO 2: "Gerar Comparativo" (RODA CÁLCULOS E EXIBE O DASHBOARD COM 4 GRÁFICOS RECHARTS)
   const executarSimulacao = async () => {
     try {
       const payload = {
@@ -159,6 +159,12 @@ export const App: React.FC = () => {
       if (response.ok) {
         const data: ResultadoAluguel = await response.json();
         setResultado(data);
+
+        // Rolar suavemente até a seção de resultado/gráficos
+        setTimeout(() => {
+          const el = document.getElementById("simulador");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }, 100);
       }
     } catch (e) {
       console.warn("Simulação cliente offline", e);
@@ -213,7 +219,7 @@ export const App: React.FC = () => {
           mensagemBanco={mensagemBanco}
         />
 
-        {/* Dashboard de Comparação e 4 Gráficos Recharts */}
+        {/* Dashboard de Comparação e 4 Gráficos Recharts (Exibido sempre que houver resultado de simulação) */}
         {resultado && (
           <DashboardComparativo
             resultado={resultado}
@@ -229,15 +235,6 @@ export const App: React.FC = () => {
           />
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 mt-16">
-        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-          <p>
-            © {new Date().getFullYear()} Sistema de Análise Financeira de Venda vs. Aluguel de Imóveis Financiados.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 };
