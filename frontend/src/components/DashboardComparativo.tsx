@@ -12,7 +12,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ResultadoAluguel, ResultadoVenda, TaxaExtra } from "../types";
-import { DonutChartCard } from "./DonutChartCard";
 import { GraficosComparativos } from "./GraficosComparativos";
 import { ListaDeducoesExtras } from "./ListaDeducoesExtras";
 import { formatCurrencyBRL, parseCurrencyBRL } from "../utils/formatters";
@@ -92,7 +91,7 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
     return acc + t.valor;
   }, 0);
 
-  // Recálculo do cenário de venda padrão
+  // Recálculo do cenário de venda padrão em tempo real ao editar o input
   const resultadoVendaBase = calcularCenarioVenda({
     valorVenda: valorVendaSimulado > 0 ? valorVendaSimulado : resultado.resultadoVendaAgora.valorVenda,
     valorCompraOriginal: resultado.resultadoVendaAgora.valorCompraOriginal || 350000,
@@ -332,19 +331,10 @@ export const DashboardComparativo: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* 3. OS 4 GRÁFICOS EM DESTAQUE (RECHARTS) - ATUALIZADOS EM TEMPO REAL */}
+      {/* 3. EXCLUSIVAMENTE OS 4 GRÁFICOS EM DESTAQUE (RECHARTS) */}
       <GraficosComparativos resultado={resultadoDinamicoParaGraficos} taxaCDIAnual={taxaCDIAnual} />
 
-      {/* 4. Gráfico Donut da Composição do Aluguel */}
-      <DonutChartCard
-        valorAluguel={valorAluguelMensal}
-        valorParcela={resultadoVendaDinamico.saldoDevedorAbatido > 0 ? Math.max(0, resultado.valorAluguelMensal - fluxoCaixaMensalLiquido - custosMensaisExtras - irAluguelMensal) : 0}
-        custosExtras={custosMensaisExtras}
-        irAluguel={irAluguelMensal}
-        fluxoLiquido={fluxoCaixaMensalLiquido}
-      />
-
-      {/* 5. Quadro Comparativo Lado a Lado em 2 Colunas */}
+      {/* 4. Quadro Comparativo Lado a Lado em 2 Colunas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* COLUNA 1: OPÇÃO A - VENDER AGORA COM INPUT EDITÁVEL E LISTA DE TAXAS EXTRAS */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200 card-shadow card-shadow-hover space-y-6 flex flex-col justify-between">
