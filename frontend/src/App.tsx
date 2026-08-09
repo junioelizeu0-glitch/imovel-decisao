@@ -1,39 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "./components/Header";
 import { FormularioImovelFinanciamento } from "./components/FormularioImovelFinanciamento";
 import { DashboardComparativo } from "./components/DashboardComparativo";
 import { DadosImovel, DadosFinanciamento, ResultadoAluguel } from "./types";
 
 export const App: React.FC = () => {
-  // Estado inicial limpo
+  // Estado de entrada
   const [dadosImovel, setDadosImovel] = useState<DadosImovel>({
     endereco: "",
     cidade: "",
     estado: "",
     cep: "",
-    valorCompra: 0,
+    valorCompra: 350000,
     dataCompra: new Date().toISOString().split("T")[0],
     anoCompra: new Date().getFullYear(),
-    custoAquisicaoExtra: 0,
-    valorMercadoAtual: 0,
+    custoAquisicaoExtra: 51110,
+    valorMercadoAtual: 400000,
     isUnicoImovelAte440k: false,
     reinvestimento180Dias: false,
   });
 
   const [dadosFinanciamento, setDadosFinanciamento] = useState<DadosFinanciamento>({
     banco: "Caixa Econômica Federal",
-    valorFinanciado: 0,
-    taxaJurosAnual: 0,
+    valorFinanciado: 280000,
+    taxaJurosAnual: 9.5,
     sistemaAmortizacao: "SAC",
-    numeroParcelasTotal: 0,
-    parcelasPagas: 0,
-    saldoDevedorAtual: 0,
-    valorParcelaAtual: 0,
+    numeroParcelasTotal: 360,
+    parcelasPagas: 24,
+    saldoDevedorAtual: 240000,
+    valorParcelaAtual: 2400,
   });
 
   // Parâmetros de Simulação de Aluguel e Investimentos
-  const [valorAluguelMensal, setValorAluguelMensal] = useState<number>(0);
-  const [custosMensaisExtras, setCustosMensaisExtras] = useState<number>(0);
+  const [valorAluguelMensal, setValorAluguelMensal] = useState<number>(2800);
+  const [custosMensaisExtras, setCustosMensaisExtras] = useState<number>(300);
   const [taxaValorizacaoEstimada, setTaxaValorizacaoEstimada] = useState<number>(6.0);
   const [taxaCDIAnual, setTaxaCDIAnual] = useState<number>(10.5);
 
@@ -43,6 +43,11 @@ export const App: React.FC = () => {
   const [salvandoBanco, setSalvandoBanco] = useState(false);
   const [mensagemBanco, setMensagemBanco] = useState<string | null>(null);
   const [imovelSalvoId, setImovelSalvoId] = useState<string | null>(null);
+
+  // Executa a simulação ao carregar a página para que os 4 GRÁFICOS APAREÇAM IMEDIATAMENTE
+  useEffect(() => {
+    executarSimulacao();
+  }, []);
 
   // Função para limpar todos os campos e iniciar nova análise
   const handleNovaAnalise = () => {
@@ -79,7 +84,7 @@ export const App: React.FC = () => {
   // BOTÃO 1: "Salvar no Banco de Dados" (APENAS DADOS DE ENTRADA IMÓVEL + FINANCIAMENTO)
   const handleSalvarNoBanco = async () => {
     if (!dadosImovel.endereco || !dadosImovel.cidade || !dadosImovel.cep) {
-      setMensagemBanco("⚠️ Preencha pelo menos o CEP e endereço do imóvel antes de salvar no banco.");
+      setMensagemBanco("⚠️ Preencha o CEP e endereço antes de salvar os dados no banco.");
       return;
     }
 
@@ -125,26 +130,26 @@ export const App: React.FC = () => {
     }
   };
 
-  // BOTÃO 2: "Gerar Comparativo" (RODA CÁLCULOS E EXIBE O DASHBOARD COM 4 GRÁFICOS RECHARTS)
+  // BOTÃO 2: "Gerar Comparativo" (RODA CÁLCULOS FISCAIS/FINANCEIROS E RENDERIZA OS 4 GRÁFICOS)
   const executarSimulacao = async () => {
     try {
       const payload = {
-        valorMercadoAtual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
-        saldoDevedorAtual: dadosFinanciamento.saldoDevedorAtual,
-        taxaJurosFinanciamentoAnual: dadosFinanciamento.taxaJurosAnual,
+        valorMercadoAtual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra || 400000,
+        saldoDevedorAtual: dadosFinanciamento.saldoDevedorAtual || 240000,
+        taxaJurosFinanciamentoAnual: dadosFinanciamento.taxaJurosAnual || 9.5,
         sistemaAmortizacao: dadosFinanciamento.sistemaAmortizacao,
         parcelasRestantes: Math.max(
           1,
-          dadosFinanciamento.numeroParcelasTotal - dadosFinanciamento.parcelasPagas
+          (dadosFinanciamento.numeroParcelasTotal || 360) - (dadosFinanciamento.parcelasPagas || 24)
         ),
-        valorParcelaAtual: dadosFinanciamento.valorParcelaAtual,
-        valorAluguelMensal,
+        valorParcelaAtual: dadosFinanciamento.valorParcelaAtual || 2400,
+        valorAluguelMensal: valorAluguelMensal || 2800,
         custosMensaisExtras,
         taxaValorizacaoAnualEstimada: taxaValorizacaoEstimada,
         taxaCDIAnualRef: taxaCDIAnual,
-        valorCompra: dadosImovel.valorCompra,
-        custoAquisicaoExtra: dadosImovel.custoAquisicaoExtra,
-        anoCompra: dadosImovel.anoCompra,
+        valorCompra: dadosImovel.valorCompra || 350000,
+        custoAquisicaoExtra: dadosImovel.custoAquisicaoExtra || 51110,
+        anoCompra: dadosImovel.anoCompra || 2026,
         percentualCorretagem: 6,
         isUnicoImovelAte440k: dadosImovel.isUnicoImovelAte440k,
         reinvestimento180Dias: dadosImovel.reinvestimento180Dias,
@@ -160,7 +165,7 @@ export const App: React.FC = () => {
         const data: ResultadoAluguel = await response.json();
         setResultado(data);
 
-        // Rolar suavemente até a seção de resultado/gráficos
+        // Rolar suavemente até o dashboard de gráficos
         setTimeout(() => {
           const el = document.getElementById("simulador");
           if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -171,7 +176,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // AÇÃO OPCIONAL NO DASHBOARD: "Salvar Simulação no Histórico do Banco"
+  // AÇÃO OPCIONAL DENTRO DO DASHBOARD: "Salvar Simulação no Histórico do Banco"
   const handleSalvarSimulacaoHistorico = async () => {
     if (!resultado) return;
 
@@ -219,7 +224,7 @@ export const App: React.FC = () => {
           mensagemBanco={mensagemBanco}
         />
 
-        {/* Dashboard de Comparação e 4 Gráficos Recharts (Exibido sempre que houver resultado de simulação) */}
+        {/* Dashboard de Comparação e 4 Gráficos Recharts (Exibido com destaque) */}
         {resultado && (
           <DashboardComparativo
             resultado={resultado}
