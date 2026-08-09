@@ -12,53 +12,62 @@ export async function criarImovelComFinanciamento(req: Request, res: Response) {
       cidade,
       estado,
       cep,
-      valor_compra,
+      valor_compra = 0,
       data_compra,
       custo_aquisicao_extra = 0,
       valor_mercado_atual,
       // Financiamento
       banco,
-      valor_financiado,
-      taxa_juros_anual,
-      sistema_amortizacao,
-      numero_parcelas_total,
-      parcelas_pagas,
+      valor_financiado = 0,
+      taxa_juros_anual = 0,
+      sistema_amortizacao = "SAC",
+      numero_parcelas_total = 360,
+      parcelas_pagas = 0,
       saldo_devedor_manual,
     } = req.body;
 
-    if (!endereco || !cidade || !estado || !cep || !valor_compra || !valor_financiado) {
-      return res.status(400).json({ error: "Campos obrigatórios ausentes" });
+    if (!endereco || !cidade || !cep) {
+      return res.status(400).json({ error: "Preencha o CEP, Endereço e Cidade do imóvel antes de salvar." });
     }
 
+    const valorCompraNum = Number(valor_compra) || 0;
+    const valorFinanciadoNum = Number(valor_financiado) || 0;
+    const taxaJurosNum = Number(taxa_juros_anual) || 0;
+    const numeroParcelasNum = Number(numero_parcelas_total) || 360;
+    const parcelasPagasNum = Number(parcelas_pagas) || 0;
+
     const calculoFin = calcularFinanciamento({
-      valorFinanciado: Number(valor_financiado),
-      taxaJurosAnual: Number(taxa_juros_anual),
+      valorFinanciado: valorFinanciadoNum,
+      taxaJurosAnual: taxaJurosNum,
       sistemaAmortizacao: sistema_amortizacao || "SAC",
-      numeroParcelasTotal: Number(numero_parcelas_total),
-      parcelasPagas: Number(parcelas_pagas),
+      numeroParcelasTotal: numeroParcelasNum,
+      parcelasPagas: parcelasPagasNum,
       saldoDevedorManual: saldo_devedor_manual ? Number(saldo_devedor_manual) : undefined,
     });
 
+    const dataCompraValida =
+      data_compra && !isNaN(Date.parse(data_compra)) ? new Date(data_compra) : new Date();
+
     const novoImovel = await prisma.imovel.create({
       data: {
-        endereco,
-        cidade,
-        estado,
-        cep,
-        valor_compra: Number(valor_compra),
-        data_compra: new Date(data_compra || Date.now()),
-        custo_aquisicao_extra: Number(custo_aquisicao_extra),
-        valor_mercado_atual: valor_mercado_atual ? Number(valor_mercado_atual) : Number(valor_compra),
+        endereco: String(endereco),
+        cidade: String(cidade),
+        estado: String(estado || "UF"),
+        cep: String(cep),
+        valor_compra: valorCompraNum,
+        data_compra: dataCompraValida,
+        custo_aquisicao_extra: Number(custo_aquisicao_extra) || 0,
+        valor_mercado_atual: valor_mercado_atual ? Number(valor_mercado_atual) : valorCompraNum,
         financiamentos: {
           create: {
             banco: banco || "Caixa Econômica Federal",
-            valor_financiado: Number(valor_financiado),
-            taxa_juros_anual: Number(taxa_juros_anual),
+            valor_financiado: valorFinanciadoNum,
+            taxa_juros_anual: taxaJurosNum,
             sistema_amortizacao: sistema_amortizacao || "SAC",
-            numero_parcelas_total: Number(numero_parcelas_total),
-            parcelas_pagas: Number(parcelas_pagas),
-            valor_parcela_atual: calculoFin.valorParcelaAtual,
-            saldo_devedor_atual: calculoFin.saldoDevedorAtual,
+            numero_parcelas_total: numeroParcelasNum,
+            parcelas_pagas: parcelasPagasNum,
+            valor_parcela_atual: calculoFin.valorParcelaAtual || 0,
+            saldo_devedor_atual: calculoFin.saldoDevedorAtual || 0,
           },
         },
       },

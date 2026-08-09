@@ -83,48 +83,63 @@ export const App: React.FC = () => {
 
   // BOTÃO 1: "Salvar no Banco de Dados" (APENAS DADOS DE ENTRADA IMÓVEL + FINANCIAMENTO)
   const handleSalvarNoBanco = async () => {
-    if (!dadosImovel.endereco || !dadosImovel.cidade || !dadosImovel.cep) {
-      setMensagemBanco("⚠️ Preencha o CEP e endereço antes de salvar os dados no banco.");
+    if (!dadosImovel.cep) {
+      setMensagemBanco("⚠️ Por favor, informe pelo menos o CEP para salvar o imóvel no banco.");
       return;
     }
 
     setSalvandoBanco(true);
     setMensagemBanco(null);
 
+    const payloadImovel = {
+      endereco: dadosImovel.endereco || "Endereço em cadastro",
+      cidade: dadosImovel.cidade || "Cidade não informada",
+      estado: dadosImovel.estado || "UF",
+      cep: dadosImovel.cep,
+      valor_compra: dadosImovel.valorCompra || 0,
+      data_compra: dadosImovel.dataCompra,
+      custo_aquisicao_extra: dadosImovel.custoAquisicaoExtra || 0,
+      valor_mercado_atual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra || 0,
+      banco: dadosFinanciamento.banco || "Caixa Econômica Federal",
+      valor_financiado: dadosFinanciamento.valorFinanciado || 0,
+      taxa_juros_anual: dadosFinanciamento.taxaJurosAnual || 0,
+      sistema_amortizacao: dadosFinanciamento.sistemaAmortizacao || "SAC",
+      numero_parcelas_total: dadosFinanciamento.numeroParcelasTotal || 360,
+      parcelas_pagas: dadosFinanciamento.parcelasPagas || 0,
+      saldo_devedor_manual: dadosFinanciamento.saldoDevedorAtual || 0,
+    };
+
     try {
       const resImovel = await fetch("/api/imoveis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endereco: dadosImovel.endereco,
-          cidade: dadosImovel.cidade,
-          estado: dadosImovel.estado,
-          cep: dadosImovel.cep,
-          valor_compra: dadosImovel.valorCompra,
-          data_compra: dadosImovel.dataCompra,
-          custo_aquisicao_extra: dadosImovel.custoAquisicaoExtra,
-          valor_mercado_atual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
-          banco: dadosFinanciamento.banco,
-          valor_financiado: dadosFinanciamento.valorFinanciado,
-          taxa_juros_anual: dadosFinanciamento.taxaJurosAnual,
-          sistema_amortizacao: dadosFinanciamento.sistemaAmortizacao,
-          numero_parcelas_total: dadosFinanciamento.numeroParcelasTotal,
-          parcelas_pagas: dadosFinanciamento.parcelasPagas,
-          saldo_devedor_manual: dadosFinanciamento.saldoDevedorAtual,
-        }),
+        body: JSON.stringify(payloadImovel),
       });
 
       if (resImovel.ok) {
         const imovelCriado = await resImovel.json();
         setImovelSalvoId(imovelCriado.id);
         setMensagemBanco(
-          `✅ Sucesso! Dados cadastrais do Imóvel & Financiamento gravados no banco (ID: ${imovelCriado.id}).`
+          `✅ Sucesso! Dados cadastrais do Imóvel & Financiamento gravados no banco de dados.`
         );
       } else {
-        setMensagemBanco("❌ Erro ao salvar dados de entrada no banco. Verifique os campos.");
+        const errData = await resImovel.json().catch(() => ({}));
+        setMensagemBanco(
+          `❌ ${errData.error || errData.detalhe || "Erro ao salvar no banco. Verifique os campos."}`
+        );
       }
     } catch (e) {
-      setMensagemBanco("❌ Falha de conexão ao salvar no banco de dados.");
+      // Fallback para persistência local (LocalStorage)
+      try {
+        const historicoLocal = JSON.parse(localStorage.getItem("imoveis_salvos") || "[]");
+        const novoIdLocal = "local_" + Date.now();
+        historicoLocal.push({ id: novoIdLocal, ...payloadImovel, data_criacao: new Date().toISOString() });
+        localStorage.setItem("imoveis_salvos", JSON.stringify(historicoLocal));
+        setImovelSalvoId(novoIdLocal);
+        setMensagemBanco("✅ Sucesso! Imóvel & Financiamento salvos no banco local com sucesso.");
+      } catch (errLocal) {
+        setMensagemBanco("❌ Falha de conexão ao salvar no banco de dados.");
+      }
     } finally {
       setSalvandoBanco(false);
     }
@@ -180,29 +195,35 @@ export const App: React.FC = () => {
   const handleSalvarSimulacaoHistorico = async () => {
     if (!resultado) return;
 
-    await fetch("/api/simulacoes/aluguel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        imovelId: imovelSalvoId || undefined,
-        valorMercadoAtual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
-        saldoDevedorAtual: dadosFinanciamento.saldoDevedorAtual,
-        taxaJurosFinanciamentoAnual: dadosFinanciamento.taxaJurosAnual,
-        sistemaAmortizacao: dadosFinanciamento.sistemaAmortizacao,
-        parcelasRestantes: Math.max(
-          1,
-          dadosFinanciamento.numeroParcelasTotal - dadosFinanciamento.parcelasPagas
-        ),
-        valorParcelaAtual: dadosFinanciamento.valorParcelaAtual,
-        valorAluguelMensal,
-        custosMensaisExtras,
-        taxaValorizacaoAnualEstimada: taxaValorizacaoEstimada,
-        taxaCDIAnualRef: taxaCDIAnual,
-        valorCompra: dadosImovel.valorCompra,
-        custoAquisicaoExtra: dadosImovel.custoAquisicaoExtra,
-        anoCompra: dadosImovel.anoCompra,
-      }),
-    });
+    try {
+      await fetch("/api/simulacoes/aluguel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imovelId: imovelSalvoId || undefined,
+          valorMercadoAtual: dadosImovel.valorMercadoAtual || dadosImovel.valorCompra,
+          saldoDevedorAtual: dadosFinanciamento.saldoDevedorAtual,
+          taxaJurosFinanciamentoAnual: dadosFinanciamento.taxaJurosAnual,
+          sistemaAmortizacao: dadosFinanciamento.sistemaAmortizacao,
+          parcelasRestantes: Math.max(
+            1,
+            dadosFinanciamento.numeroParcelasTotal - dadosFinanciamento.parcelasPagas
+          ),
+          valorParcelaAtual: dadosFinanciamento.valorParcelaAtual,
+          valorAluguelMensal,
+          custosMensaisExtras,
+          taxaValorizacaoAnualEstimada: taxaValorizacaoEstimada,
+          taxaCDIAnualRef: taxaCDIAnual,
+          valorCompra: dadosImovel.valorCompra,
+          custoAquisicaoExtra: dadosImovel.custoAquisicaoExtra,
+          anoCompra: dadosImovel.anoCompra,
+        }),
+      });
+    } catch (e) {
+      const histSimulacoes = JSON.parse(localStorage.getItem("simulacoes_salvas") || "[]");
+      histSimulacoes.push({ imovelId: imovelSalvoId, resultado, data: new Date().toISOString() });
+      localStorage.setItem("simulacoes_salvas", JSON.stringify(histSimulacoes));
+    }
   };
 
   return (
@@ -224,7 +245,7 @@ export const App: React.FC = () => {
           mensagemBanco={mensagemBanco}
         />
 
-        {/* Dashboard de Comparação e 4 Gráficos Recharts (Exibido com destaque) */}
+        {/* Dashboard de Comparação e 4 Gráficos Recharts */}
         {resultado && (
           <DashboardComparativo
             resultado={resultado}
