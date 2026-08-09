@@ -414,28 +414,6 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Toggles de Isenção Fiscal */}
-          <div className="pt-2 space-y-2 border-t border-slate-100">
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 font-medium">
-              <input
-                type="checkbox"
-                checked={dadosImovel.isUnicoImovelAte440k}
-                onChange={(e) => setDadosImovel({ ...dadosImovel, isUnicoImovelAte440k: e.target.checked })}
-                className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
-              />
-              Único imóvel vendido por até R$ 440 mil (sem vendas nos últimos 5 anos)
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 font-medium">
-              <input
-                type="checkbox"
-                checked={dadosImovel.reinvestimento180Dias}
-                onChange={(e) => setDadosImovel({ ...dadosImovel, reinvestimento180Dias: e.target.checked })}
-                className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
-              />
-              Pretendo reinvestir o valor em outro imóvel residencial em até 180 dias
-            </label>
-          </div>
         </div>
 
         {/* BLOCO 2: DADOS DO FINANCIAMENTO */}
