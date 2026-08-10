@@ -181,10 +181,10 @@ export const FormularioImovelFinanciamento: React.FC<FormularioProps> = ({
             </span>
           </div>
 
-          {/* Campo CEP */}
+          {/* Campo CEP Limpo sem texto (Formato 00000-000) */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-teal-600" /> CEP (Formato 00000-000)
+              <MapPin className="w-3.5 h-3.5 text-teal-600" /> CEP
             </label>
             <div className="relative">
               <input

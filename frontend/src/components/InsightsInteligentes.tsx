@@ -42,12 +42,12 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
     valorVenda > 0 ? ((valorVenda - valorVendaMinimoBreakEven) / valorVenda) * 100 : 0;
 
   return (
-    <div id="relatorio" className="bg-white rounded-xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-6">
+    <div id="relatorio" className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 card-shadow space-y-6">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+          <span className="text-[10px] font-bold text-teal-600 uppercase tracking-widest flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
             Análise Estratégica Automática
           </span>
           <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 mt-0.5">
@@ -55,12 +55,9 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
             Insights Inteligentes da Venda
           </h3>
         </div>
-        <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-          Relatório Financeiro
-        </span>
       </div>
 
-      {/* Grid de 3 Cards de Insights (Column UI Style) */}
+      {/* Grid de 3 Cards de Insights */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* INSIGHT 1: Status Fiscal de IRPF */}
         <div className="bg-slate-50/70 p-5 rounded-xl border border-slate-200/80 space-y-3 relative overflow-hidden">
@@ -97,11 +94,11 @@ export const InsightsInteligentes: React.FC<InsightsProps> = ({
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Valorização do Imóvel
             </span>
-            <TrendingUp className="w-5 h-5 text-blue-600" />
+            <TrendingUp className="w-5 h-5 text-teal-600" />
           </div>
 
           <div>
-            <div className="text-lg sm:text-xl font-extrabold text-blue-900 flex items-center gap-1.5">
+            <div className="text-lg sm:text-xl font-extrabold text-teal-900 flex items-center gap-1.5">
               {percentualLucroBruto >= 0 ? "+" : ""}
               {percentualLucroBruto.toFixed(1)}%
               <span className="text-xs font-normal text-slate-500">sobre compra</span>

@@ -102,8 +102,8 @@ export const GraficoWaterfallVenda: React.FC<GraficoWaterfallProps> = ({ resulta
             Do valor bruto de venda até o valor líquido no bolso após liquidação da dívida e taxas.
           </p>
         </div>
-        <span className="text-[10px] sm:text-xs font-extrabold px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200 self-start sm:self-auto">
-          Visualização Oficial
+        <span className="text-[10px] sm:text-xs font-extrabold px-3 py-1 bg-teal-50 text-teal-800 rounded-full border border-teal-200 self-start sm:self-auto">
+          Relatório Financeiro
         </span>
       </div>
 
